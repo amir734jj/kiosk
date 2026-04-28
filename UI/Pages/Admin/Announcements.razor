@@ -1,0 +1,155 @@
+@page "/admin/announcements"
+@inject ApiService Api
+
+<PageTitle>Manage Announcements</PageTitle>
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h2><i class="bi bi-megaphone me-2"></i>Announcements</h2>
+    <HxButton Text="Add Announcement" Color="ThemeColor.Primary" Icon="BootstrapIcon.PlusLg" OnClick="() => _showForm = !_showForm" />
+</div>
+
+@if (!string.IsNullOrEmpty(_error))
+{
+    <HxAlert Color="ThemeColor.Danger" CssClass="alert-dismissible">
+        @_error
+        <button type="button" class="btn-close" @onclick="() => _error = null"></button>
+    </HxAlert>
+}
+
+@if (_showForm)
+{
+    <div class="card mb-4">
+        <div class="card-body">
+            <h5>@(_editId.HasValue ? "Edit" : "New") Announcement</h5>
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <HxInputText Label="Title" @bind-Value="_formTitle" />
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Active</label>
+                    <select @bind="_formIsActive" class="form-select">
+                        <option value="true">Yes</option>
+                        <option value="false">No</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Expires At (optional)</label>
+                    <input type="datetime-local" @bind="_formExpires" class="form-control" />
+                </div>
+                <div class="col-12">
+                    <HxInputTextArea Label="Content" @bind-Value="_formContent" Rows="3" />
+                </div>
+            </div>
+            <div class="mt-3">
+                <HxButton Text="Save" Color="ThemeColor.Success" Icon="BootstrapIcon.CheckLg" OnClick="Save" CssClass="me-2" />
+                <HxButton Text="Cancel" Color="ThemeColor.Secondary" OnClick="CancelForm" />
+            </div>
+        </div>
+    </div>
+}
+
+@if (_items is null)
+{
+    <div class="text-center py-5"><HxSpinner /></div>
+}
+else if (_items.Count == 0)
+{
+    <HxAlert Color="ThemeColor.Info">No announcements yet.</HxAlert>
+}
+else
+{
+    <div class="table-responsive">
+        <table class="table table-hover">
+            <thead class="table-dark">
+                <tr>
+                    <th>Title</th>
+                    <th>Content</th>
+                    <th>Active</th>
+                    <th>Expires</th>
+                    <th>Created</th>
+                    <th style="width:120px">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var a in _items)
+                {
+                    <tr class="@(!a.IsActive ? "table-secondary" : "")">
+                        <td><strong>@a.Title</strong></td>
+                        <td class="text-truncate" style="max-width:300px">@a.Content</td>
+                        <td>
+                            <HxBadge Color="@(a.IsActive ? ThemeColor.Success : ThemeColor.Secondary)">
+                                @(a.IsActive ? "Active" : "Inactive")
+                            </HxBadge>
+                        </td>
+                        <td>@(a.ExpiresAt?.LocalDateTime.ToString("MMM d, yyyy h:mm tt") ?? "Never")</td>
+                        <td>@a.CreatedAt.LocalDateTime.ToString("MMM d, yyyy")</td>
+                        <td>
+                            <HxButton Icon="BootstrapIcon.Pencil" Color="ThemeColor.Primary" Size="ButtonSize.Small" Outline="true" OnClick="() => Edit(a)" CssClass="me-1" />
+                            <HxButton Icon="BootstrapIcon.Trash" Color="ThemeColor.Danger" Size="ButtonSize.Small" Outline="true" OnClick="() => Delete(a.Id)" />
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+
+@code {
+    private List<AnnouncementDto>? _items;
+    private bool _showForm;
+    private int? _editId;
+    private string _formTitle = "";
+    private string _formContent = "";
+    private string _formIsActive = "true";
+    private DateTime? _formExpires;
+    private string? _error;
+
+    protected override async Task OnInitializedAsync() => await Load();
+    private async Task Load() => _items = await Api.GetAnnouncementsAsync();
+
+    private void Edit(AnnouncementDto a)
+    {
+        _editId = a.Id;
+        _formTitle = a.Title;
+        _formContent = a.Content;
+        _formIsActive = a.IsActive.ToString().ToLower();
+        _formExpires = a.ExpiresAt?.LocalDateTime;
+        _showForm = true;
+    }
+
+    private void CancelForm()
+    {
+        _showForm = false;
+        _editId = null;
+        _formTitle = "";
+        _formContent = "";
+        _formIsActive = "true";
+        _formExpires = null;
+    }
+
+    private async Task Save()
+    {
+        _error = null;
+        var isActive = _formIsActive == "true";
+        DateTimeOffset? expires = _formExpires.HasValue ? new DateTimeOffset(_formExpires.Value, TimeSpan.Zero) : null;
+
+        if (_editId.HasValue)
+        {
+            var ok = await Api.UpdateAnnouncementAsync(_editId.Value, new UpdateAnnouncementRequest(_formTitle, _formContent, isActive, expires));
+            if (!ok) { _error = "Failed to update."; return; }
+        }
+        else
+        {
+            var (ok, error) = await Api.CreateAnnouncementAsync(new CreateAnnouncementRequest(_formTitle, _formContent, expires));
+            if (!ok) { _error = error; return; }
+        }
+        CancelForm();
+        await Load();
+    }
+
+    private async Task Delete(int id)
+    {
+        await Api.DeleteAnnouncementAsync(id);
+        await Load();
+    }
+}

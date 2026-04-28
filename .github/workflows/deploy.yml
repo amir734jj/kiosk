@@ -1,0 +1,32 @@
+name: Deploy
+
+on:
+  push:
+    branches:
+      - master
+      - main
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  HEROKU_APP_NAME: kiosk
+
+jobs:
+  deploy-heroku:
+    name: Build & Deploy to Heroku
+    runs-on: ubuntu-latest
+    env:
+      HEROKU_API_KEY: ${{ secrets.HEROKU_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Heroku CLI
+        run: curl -fsSL https://cli-assets.heroku.com/install.sh | sh
+
+      - name: Login to Heroku Container Registry
+        run: heroku container:login
+
+      - name: Build & Push image
+        run: heroku container:push web --app ${{ env.HEROKU_APP_NAME }}
+
+      - name: Release container
+        run: heroku container:release web --app ${{ env.HEROKU_APP_NAME }}

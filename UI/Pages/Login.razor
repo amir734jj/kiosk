@@ -1,0 +1,68 @@
+@page "/login"
+@inject ApiService Api
+@inject NavigationManager Nav
+
+<PageTitle>Login</PageTitle>
+
+<div class="row justify-content-center mt-5">
+    <div class="col-md-5">
+        <div class="card shadow">
+            <div class="card-body">
+                <h3 class="card-title text-center mb-4"><i class="bi bi-building me-2"></i>Office Kiosk</h3>
+
+                @if (!string.IsNullOrEmpty(_error))
+                {
+                    <HxAlert Color="ThemeColor.Danger">@_error</HxAlert>
+                }
+
+                <EditForm Model="_model" OnValidSubmit="HandleLogin" FormName="login">
+                    <div class="mb-3">
+                        <HxInputText Label="Username" @bind-Value="_model.Username" />
+                    </div>
+                    <div class="mb-3">
+                        <HxInputText Label="Password" @bind-Value="_model.Password" Type="InputType.Password" />
+                    </div>
+                    <HxSubmit Text="Login" Color="ThemeColor.Primary" CssClass="w-100" Enabled="!_loading">
+                        @if (_loading) { <HxSpinner Size="SpinnerSize.Small" CssClass="me-1" /> }
+                    </HxSubmit>
+                </EditForm>
+
+                <div class="text-center mt-3">
+                    <a href="/register">Don't have an account? Register</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private LoginModel _model = new();
+    private string? _error;
+    private bool _loading;
+
+    private class LoginModel
+    {
+        public string Username { get; set; } = "";
+        public string Password { get; set; } = "";
+    }
+
+    private async Task HandleLogin()
+    {
+        _error = null;
+        _loading = true;
+        try
+        {
+            var error = await Api.LoginAsync(_model.Username, _model.Password);
+            if (error is not null)
+            {
+                _error = error;
+                return;
+            }
+            Nav.NavigateTo("/");
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+}

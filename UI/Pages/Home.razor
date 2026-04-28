@@ -1,0 +1,23 @@
+﻿@page "/"
+@inject AuthService Auth
+@inject NavigationManager Nav
+
+<PageTitle>Home</PageTitle>
+
+@code {
+    protected override void OnInitialized()
+    {
+        if (!Auth.IsAuthenticated)
+        {
+            Nav.NavigateTo("/login");
+        }
+        else if (Auth.IsAdmin)
+        {
+            Nav.NavigateTo("/admin/offices");
+        }
+        else
+        {
+            Nav.NavigateTo("/my-office");
+        }
+    }
+}

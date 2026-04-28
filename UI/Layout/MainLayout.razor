@@ -1,0 +1,114 @@
+﻿@inherits LayoutComponentBase
+@inject AuthService Auth
+@inject ApiService Api
+@inject NavigationManager Nav
+@inject IJSRuntime JS
+@implements IDisposable
+
+<HxProgressIndicator />
+
+@if (Auth.IsImpersonating)
+{
+    <HxAlert Color="ThemeColor.Warning" CssClass="text-center mb-0 py-1 rounded-0">
+        <div class="d-flex flex-wrap justify-content-center align-items-center gap-2">
+            <span>Viewing as <strong>@Auth.Role</strong></span>
+            <HxButton Text="Back to Admin" Color="ThemeColor.Dark" Size="ButtonSize.Small" Outline="true" OnClick="StopImpersonating" />
+        </div>
+    </HxAlert>
+}
+
+<HxNavbar CssClass="bg-dark mb-3" ColorMode="ColorMode.Dark" Expand="NavbarExpand.MediumUp">
+    <HxNavbarBrand Href="/">
+        <i class="bi bi-building me-1"></i> Office Kiosk
+    </HxNavbarBrand>
+    <HxNavbarToggler CollapseTarget="#mainNav" />
+    <HxNavbarCollapse Id="mainNav">
+        <HxNav CssClass="me-auto mb-2 mb-md-0">
+            @if (Auth.IsAuthenticated)
+            {
+                @if (Auth.IsAdmin)
+                {
+                    <HxNavLink Href="/admin/offices">Offices</HxNavLink>
+                    <HxNavLink Href="/admin/announcements">Announcements</HxNavLink>
+                    <HxNavLink Href="/admin/users">Users</HxNavLink>
+                    <HxNavLink Href="/admin/global-config">Global Config</HxNavLink>
+                }
+                @if (!Auth.IsAdmin)
+                {
+                    <HxNavLink Href="/my-office">My Office</HxNavLink>
+                }
+                <HxNavLink Href="/display">
+                    <i class="bi bi-tv me-1"></i>Public Display
+                </HxNavLink>
+            }
+        </HxNav>
+        @if (Auth.IsAuthenticated)
+        {
+            <span class="navbar-text text-white-50 me-2">
+                <i class="bi bi-person-circle me-1"></i>@Auth.Role
+            </span>
+            <HxButton Icon="@(_isDark ? BootstrapIcon.SunFill : BootstrapIcon.MoonFill)"
+                      Color="ThemeColor.Secondary" Size="ButtonSize.Small" CssClass="me-1"
+                      OnClick="ToggleTheme" />
+            <HxButton Text="Logout" Color="ThemeColor.Danger" Size="ButtonSize.Small" Outline="true" OnClick="Logout" />
+        }
+    </HxNavbarCollapse>
+</HxNavbar>
+
+<div class="container">
+    <ErrorBoundary @ref="_errorBoundary">
+        <ChildContent>
+            @Body
+        </ChildContent>
+        <ErrorContent>
+            <HxAlert Color="ThemeColor.Danger">
+                Something went wrong. <HxButton Text="Try Again" Color="ThemeColor.Primary" Size="ButtonSize.Small" OnClick="Recover" />
+            </HxAlert>
+        </ErrorContent>
+    </ErrorBoundary>
+</div>
+
+<HxMessenger />
+<HxMessageBoxHost />
+
+@code {
+    private bool _isDark;
+    private ErrorBoundary? _errorBoundary;
+
+    protected override void OnInitialized() => Auth.AuthStateChanged += StateHasChanged;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            var theme = await JS.InvokeAsync<string>("themeManager.get");
+            _isDark = theme == "dark";
+            StateHasChanged();
+        }
+    }
+
+    public void Dispose() => Auth.AuthStateChanged -= StateHasChanged;
+
+    async Task ToggleTheme()
+    {
+        _isDark = !_isDark;
+        await JS.InvokeVoidAsync("themeManager.set", _isDark ? "dark" : "light");
+    }
+
+    async Task Logout()
+    {
+        await Auth.LogoutAsync();
+        Nav.NavigateTo("/login");
+    }
+
+    async Task StopImpersonating()
+    {
+        await Api.StopImpersonatingAsync();
+        Nav.NavigateTo("/", forceLoad: true);
+    }
+
+    void Recover()
+    {
+        _errorBoundary?.Recover();
+    }
+}

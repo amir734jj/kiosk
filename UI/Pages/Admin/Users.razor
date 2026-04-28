@@ -1,0 +1,154 @@
+@page "/admin/users"
+@inject ApiService Api
+@inject AuthService Auth
+@inject NavigationManager Nav
+
+<PageTitle>Manage Users</PageTitle>
+
+<h2 class="mb-3"><i class="bi bi-people me-2"></i>Users</h2>
+
+@if (_users is null)
+{
+    <div class="text-center py-5"><HxSpinner /></div>
+}
+else if (_users.Count == 0)
+{
+    <HxAlert Color="ThemeColor.Info">No users found.</HxAlert>
+}
+else
+{
+    <div class="table-responsive">
+        <table class="table table-hover">
+            <thead class="table-dark">
+                <tr>
+                    <th>Username</th>
+                    <th>Role</th>
+                    <th>Status</th>
+                    <th>Office</th>
+                    <th>Last Login</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var u in _users)
+                {
+                    <tr>
+                        <td>@u.Username</td>
+                        <td>
+                            <HxBadge Color="@(u.Role == "Admin" ? ThemeColor.Danger : ThemeColor.Info)">@u.Role</HxBadge>
+                        </td>
+                        <td>
+                            <HxBadge Color="@(u.IsActive ? ThemeColor.Success : ThemeColor.Warning)">
+                                @(u.IsActive ? "Active" : "Pending")
+                            </HxBadge>
+                        </td>
+                        <td>@(u.OfficeName ?? "—")</td>
+                        <td>@(u.LastLoginAt?.LocalDateTime.ToString("MMM d, yyyy h:mm tt") ?? "Never")</td>
+                        <td>
+                            @if (u.Id != Auth.UserId)
+                            {
+                                <div class="d-flex gap-1 flex-wrap">
+                                    @if (!u.IsActive)
+                                    {
+                                        <HxButton Icon="BootstrapIcon.CheckCircle" Color="ThemeColor.Success" Size="ButtonSize.Small" Outline="true" OnClick="() => Activate(u.Id)" Tooltip="Activate" />
+                                    }
+                                    else
+                                    {
+                                        <HxButton Icon="BootstrapIcon.PauseCircle" Color="ThemeColor.Warning" Size="ButtonSize.Small" Outline="true" OnClick="() => Deactivate(u.Id)" Tooltip="Deactivate" />
+                                    }
+
+                                    @if (u.Role != "Admin")
+                                    {
+                                        <HxButton Icon="BootstrapIcon.ShieldCheck" Color="ThemeColor.Info" Size="ButtonSize.Small" Outline="true" OnClick="() => MakeAdmin(u.Id)" Tooltip="Make Admin" />
+                                    }
+                                    else
+                                    {
+                                        <HxButton Icon="BootstrapIcon.Person" Color="ThemeColor.Secondary" Size="ButtonSize.Small" Outline="true" OnClick="() => MakeUser(u.Id)" Tooltip="Make User" />
+                                    }
+
+                                    @if (_offices is not null)
+                                    {
+                                        <div class="dropdown">
+                                            <button class="btn btn-sm btn-outline-primary dropdown-toggle" data-bs-toggle="dropdown" title="@(u.OfficeId is not null ? "Change Office" : "Assign Office")">
+                                                <i class="bi bi-link"></i>
+                                            </button>
+                                            <ul class="dropdown-menu">
+                                                @foreach (var o in _offices)
+                                                {
+                                                    <li>
+                                                        <button class="dropdown-item @(o.Id == u.OfficeId ? "active" : "")" @onclick="() => AssignOffice(o.Id, u.Id)">
+                                                            @o.UnitNumber - @o.Name
+                                                        </button>
+                                                    </li>
+                                                }
+                                                @if (u.OfficeId is not null)
+                                                {
+                                                    <li><hr class="dropdown-divider" /></li>
+                                                    <li>
+                                                        <button class="dropdown-item text-danger" @onclick="() => UnassignOffice(u.Id)">
+                                                            <i class="bi bi-x-circle me-1"></i>Unassign
+                                                        </button>
+                                                    </li>
+                                                }
+                                            </ul>
+                                        </div>
+                                    }
+
+                                    <HxButton Icon="BootstrapIcon.Trash" Color="ThemeColor.Danger" Size="ButtonSize.Small" Outline="true" OnClick="() => DeleteUser(u.Id)" Tooltip="Delete" />
+
+                                    @if (u.Role != "Admin")
+                                    {
+                                        <HxButton Icon="BootstrapIcon.EyeFill" Color="ThemeColor.Dark" Size="ButtonSize.Small" Outline="true" OnClick="() => ViewAs(u.Id)" Tooltip="View As" />
+                                    }
+                                </div>
+                            }
+                            else
+                            {
+                                <span class="text-muted"><i class="bi bi-person-check"></i> You</span>
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+
+@code {
+    private List<UserDto>? _users;
+    private List<OfficeDto>? _offices;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Load();
+        _offices = await Api.GetOfficesAsync();
+    }
+
+    private async Task Load() => _users = await Api.GetUsersAsync();
+
+    private async Task Activate(int id) { await Api.ActivateUserAsync(id); await Load(); }
+    private async Task Deactivate(int id) { await Api.DeactivateUserAsync(id); await Load(); }
+    private async Task MakeAdmin(int id) { await Api.MakeAdminAsync(id); await Load(); }
+    private async Task MakeUser(int id) { await Api.MakeUserAsync(id); await Load(); }
+    private async Task DeleteUser(int id) { await Api.DeleteUserAsync(id); await Load(); }
+    private async Task AssignOffice(int officeId, int userId)
+    {
+        await Api.AssignUserToOfficeAsync(officeId, userId);
+        await Load();
+    }
+
+    private async Task UnassignOffice(int userId)
+    {
+        await Api.UnassignUserFromOfficeAsync(userId);
+        await Load();
+    }
+
+    private async Task ViewAs(int userId)
+    {
+        var error = await Api.ImpersonateAsync(userId);
+        if (error is null)
+        {
+            Nav.NavigateTo("/", forceLoad: true);
+        }
+    }
+}

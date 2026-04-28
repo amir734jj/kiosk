@@ -1,0 +1,78 @@
+@page "/admin/global-config"
+@inject ApiService Api
+
+<PageTitle>Global Config</PageTitle>
+
+<h2 class="mb-3"><i class="bi bi-gear me-2"></i>Global Config</h2>
+
+@if (!string.IsNullOrEmpty(_error))
+{
+    <HxAlert Color="ThemeColor.Danger">@_error</HxAlert>
+}
+@if (!string.IsNullOrEmpty(_success))
+{
+    <HxAlert Color="ThemeColor.Success" CssClass="alert-dismissible">
+        @_success
+        <button type="button" class="btn-close" @onclick="() => _success = null"></button>
+    </HxAlert>
+}
+
+@if (_loading)
+{
+    <div class="text-center py-5"><HxSpinner /></div>
+}
+else if (_config is not null)
+{
+    <div class="card">
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <HxInputText Label="Kiosk Name" @bind-Value="_config.KioskName" Placeholder="e.g. Amir Building" Hint="Shown at the bottom of the public display" />
+                </div>
+                <div class="col-md-4">
+                    <HxInputText Label="City" @bind-Value="_config.City" Placeholder="e.g. Milwaukee" Hint="Used for weather and background image" />
+                </div>
+                <div class="col-md-4 d-flex align-items-center pt-3">
+                    <HxSwitch Label="Show city background image" @bind-Value="_config.ShowCityImage" />
+                </div>
+            </div>
+            <div class="mt-3">
+                <HxButton Text="Save" Color="ThemeColor.Primary" Icon="BootstrapIcon.CheckLg" OnClick="Save" Enabled="!_saving">
+                    @if (_saving) { <HxSpinner Size="SpinnerSize.Small" CssClass="me-1" /> }
+                </HxButton>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private GlobalConfigModel? _config;
+    private bool _loading = true;
+    private bool _saving;
+    private string? _error;
+    private string? _success;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            _config = await Api.GetGlobalConfigAsync();
+        }
+        catch { _error = "Failed to load config."; }
+        finally { _loading = false; }
+    }
+
+    private async Task Save()
+    {
+        _error = null;
+        _success = null;
+        _saving = true;
+        try
+        {
+            await Api.SaveGlobalConfigAsync(_config!);
+            _success = "Config saved successfully.";
+        }
+        catch { _error = "Failed to save config."; }
+        finally { _saving = false; }
+    }
+}
