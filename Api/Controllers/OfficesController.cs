@@ -43,10 +43,7 @@ public class OfficesController(IOfficeService officeService, UserManager<AppUser
             return BadRequest("Office name is required.");
         }
 
-        if (req.Names is null || req.Names.Count == 0)
-        {
-            return BadRequest("At least one name is required.");
-        }
+
 
         if (await officeService.ExistsByUnitAsync(req.UnitNumber))
         {
@@ -71,10 +68,7 @@ public class OfficesController(IOfficeService officeService, UserManager<AppUser
             return BadRequest("Office name is required.");
         }
 
-        if (req.Names is null || req.Names.Count == 0)
-        {
-            return BadRequest("At least one name is required.");
-        }
+
 
         if (await officeService.ExistsByUnitAsync(req.UnitNumber, id))
         {
@@ -114,10 +108,7 @@ public class OfficesController(IOfficeService officeService, UserManager<AppUser
             return BadRequest("Office name is required.");
         }
 
-        if (req.Names is null || req.Names.Count == 0)
-        {
-            return BadRequest("At least one name is required.");
-        }
+
 
         var user = await GetCurrentUser();
         if (user?.OfficeId is null)
