@@ -4,11 +4,16 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Api.Data;
 
-public class AppDbContext(DbContextOptions<AppDbContext> options)
-    : IdentityDbContext<AppUser, AppRole, int>(options)
+public sealed class AppDbContext
+    : IdentityDbContext<AppUser, AppRole, int>
 {
     public DbSet<Office> Offices => Set<Office>();
     public DbSet<Announcement> Announcements => Set<Announcement>();
+
+    public AppDbContext(DbContextOptions<AppDbContext> options) : base(options)
+    {
+        Database.EnsureCreated();
+    }
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
