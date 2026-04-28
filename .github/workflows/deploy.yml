@@ -8,7 +8,7 @@ on:
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
-  HEROKU_APP_NAME: kiosk
+  HEROKU_APP_NAME: kiosk-service
 
 jobs:
   deploy-heroku:
