@@ -140,11 +140,12 @@ using (var scope = app.Services.CreateScope())
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     if (app.Environment.IsDevelopment())
     {
-        await db.Database.EnsureCreatedAsync();
     }
     else
     {
-        await db.Database.MigrateAsync();
+        // await db.Database.MigrateAsync();
+        
+        await db.Database.EnsureCreatedAsync();
     }
 }
 
