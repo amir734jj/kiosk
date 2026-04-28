@@ -2,7 +2,7 @@
 @inject AuthService Auth
 @inject ApiService Api
 @inject NavigationManager Nav
-@inject IJSRuntime JS
+@inject IJSRuntime Js
 @implements IDisposable
 
 <HxProgressIndicator />
@@ -81,7 +81,7 @@
     {
         if (firstRender)
         {
-            var theme = await JS.InvokeAsync<string>("themeManager.get");
+            var theme = await Js.InvokeAsync<string>("themeManager.get");
             _isDark = theme == "dark";
             StateHasChanged();
         }
@@ -92,7 +92,7 @@
     async Task ToggleTheme()
     {
         _isDark = !_isDark;
-        await JS.InvokeVoidAsync("themeManager.set", _isDark ? "dark" : "light");
+        await Js.InvokeVoidAsync("themeManager.set", _isDark ? "dark" : "light");
     }
 
     async Task Logout()
