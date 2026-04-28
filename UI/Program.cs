@@ -14,7 +14,11 @@ var builder = WebAssemblyHostBuilder.CreateDefault(args);
 builder.RootComponents.Add<App>("#app");
 builder.RootComponents.Add<HeadOutlet>("head::after");
 
-var apiBaseUrl = builder.Configuration["ApiBaseUrl"] ?? builder.HostEnvironment.BaseAddress;
+var apiBaseUrl = builder.Configuration["ApiBaseUrl"];
+if (string.IsNullOrEmpty(apiBaseUrl))
+{
+    apiBaseUrl = builder.HostEnvironment.BaseAddress;
+}
 
 builder.Services.AddBlazoredLocalStorageAsSingleton();
 builder.Services.AddSingleton<AuthService>();
