@@ -119,7 +119,7 @@
         }
 
         <div class="office-grid p-4">
-            @foreach (var office in _data.Offices)
+            @foreach (var office in _data.Offices.OrderBy(x => x.UnitNumber))
             {
                 <div class="office-card">
                     <div class="unit-badge">@office.UnitNumber</div>
