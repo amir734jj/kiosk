@@ -17,6 +17,4 @@ COPY --from=build /publish/ui/wwwroot ./wwwroot
 ENV ASPNETCORE_URLS=http://+:80
 ENV ASPNETCORE_ENVIRONMENT=Production
 
-RUN DEBIAN_FRONTEND=noninteractive TZ=Etc/UTC apt-get update && apt-get -y install tzdata && rm -rf /var/lib/apt/lists/*
-
 ENTRYPOINT ["dotnet", "Api.dll"]
