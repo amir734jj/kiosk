@@ -12,20 +12,20 @@ public class PublicController(IOfficeService officeService, IAnnouncementService
     [ResponseCache(NoStore = true)]
     public async Task<IActionResult> GetDisplay()
     {
-        var (offices, announcements, config, todayHoliday) = await (
-            officeService.GetAllAsync(),
-            announcementService.GetActiveAsync(),
-            configService.GetAsync(),
-            holidayService.GetTodayHolidayAsync()
-        );
+        // DB calls — sequential (DbContext is not thread-safe)
+        var offices = await officeService.GetAllAsync();
+        var announcements = await announcementService.GetActiveAsync();
+        var config = await configService.GetAsync();
 
         var hasCity = !string.IsNullOrWhiteSpace(config.City);
 
-        var (weather, imageUrl) = await (
+        // External API calls — parallel
+        var (weather, imageUrl, todayHoliday) = await (
             hasCity ? weatherService.GetWeatherAsync(config.City) : Task.FromResult<WeatherDto?>(null),
             hasCity && config.ShowCityImage
                 ? cityImageService.GetCityImageUrlAsync(config.City)
-                : Task.FromResult<string?>(null)
+                : Task.FromResult<string?>(null),
+            holidayService.GetTodayHolidayAsync()
         );
 
         var hasBackgroundImage = imageUrl is not null;
