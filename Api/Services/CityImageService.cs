@@ -1,15 +1,22 @@
 using Api.Interfaces;
+using Microsoft.Extensions.Caching.Memory;
 using Newtonsoft.Json.Linq;
 
 namespace Api.Services;
 
-public class CityImageService(IHttpClientFactory httpClientFactory, ILogger<CityImageService> logger) : ICityImageService
+public class CityImageService(IHttpClientFactory httpClientFactory, IMemoryCache cache, ILogger<CityImageService> logger) : ICityImageService
 {
     public async Task<string?> GetCityImageUrlAsync(string? city)
     {
         if (string.IsNullOrWhiteSpace(city))
         {
             return null;
+        }
+
+        var cacheKey = $"cityimage:{city.Trim().ToLowerInvariant()}";
+        if (cache.TryGetValue(cacheKey, out string? cached))
+        {
+            return cached;
         }
 
         // 1. Wikimedia Commons: multiple city photos, rotate daily
@@ -35,7 +42,9 @@ public class CityImageService(IHttpClientFactory httpClientFactory, ILogger<City
                     if (imageUrls.Count > 0)
                     {
                         var dayIndex = DateTime.UtcNow.Hour % imageUrls.Count;
-                        return imageUrls[dayIndex];
+                        var imageUrl = imageUrls[dayIndex];
+                        cache.Set(cacheKey, imageUrl, TimeSpan.FromHours(1));
+                        return imageUrl;
                     }
                 }
             }
@@ -56,7 +65,9 @@ public class CityImageService(IHttpClientFactory httpClientFactory, ILogger<City
                 var urlBase = json["images"]?[0]?["url"]?.ToString();
                 if (!string.IsNullOrEmpty(urlBase))
                 {
-                    return $"https://www.bing.com{urlBase}";
+                    var bingUrl = $"https://www.bing.com{urlBase}";
+                    cache.Set(cacheKey, bingUrl, TimeSpan.FromHours(1));
+                    return bingUrl;
                 }
             }
         }
@@ -80,12 +91,14 @@ public class CityImageService(IHttpClientFactory httpClientFactory, ILogger<City
                 var originalSource = json["originalimage"]?["source"]?.ToString();
                 if (!string.IsNullOrEmpty(originalSource))
                 {
+                    cache.Set(cacheKey, originalSource, TimeSpan.FromHours(1));
                     return originalSource;
                 }
 
                 var thumbSource = json["thumbnail"]?["source"]?.ToString();
                 if (!string.IsNullOrEmpty(thumbSource))
                 {
+                    cache.Set(cacheKey, thumbSource, TimeSpan.FromHours(1));
                     return thumbSource;
                 }
             }

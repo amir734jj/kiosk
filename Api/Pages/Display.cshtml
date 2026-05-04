@@ -6,8 +6,8 @@
     var data = Model.Data;
     var cst = TimeZoneInfo.FindSystemTimeZoneById("America/Chicago");
     var now = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, cst);
-    var bgStyle = data?.BackgroundImageUrl is not null
-        ? $"background: url('{data.BackgroundImageUrl}') center/cover fixed;"
+    var bgStyle = data?.HasBackgroundImage == true
+        ? "background: url('/api/public/background') center/cover fixed;"
         : "background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);";
 }
 
@@ -105,11 +105,14 @@
     <footer class="text-center text-white-50 small py-2 mt-auto">
         @{
             var parts = new List<string>();
-            if (!string.IsNullOrEmpty(data?.KioskName)) parts.Add(data.KioskName);
+            if (!string.IsNullOrEmpty(data?.KioskName))
+            {
+                parts.Add(data.KioskName);
+            }
             parts.Add("Auto-refreshes every 5 minutes");
         }
         <span>@string.Join(" • ", parts)</span>
-        <span> \u2022 Last updated: @now.ToString("h:mm:ss tt")</span>
+        <span> • Last updated: @now.ToString("h:mm:ss tt")</span>
     </footer>
 
 </body>

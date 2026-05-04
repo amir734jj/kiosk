@@ -1,10 +1,11 @@
 using Api.Interfaces;
+using Microsoft.Extensions.Caching.Memory;
 using OpenMeteo;
 using Shared.Contracts;
 
 namespace Api.Services;
 
-public class WeatherService(ILogger<WeatherService> logger) : IWeatherService
+public class WeatherService(IMemoryCache cache, ILogger<WeatherService> logger) : IWeatherService
 {
     private readonly OpenMeteoClient _client = new();
 
@@ -13,6 +14,12 @@ public class WeatherService(ILogger<WeatherService> logger) : IWeatherService
         if (string.IsNullOrWhiteSpace(address))
         {
             return null;
+        }
+
+        var cacheKey = $"weather:{address.Trim().ToLowerInvariant()}";
+        if (cache.TryGetValue(cacheKey, out WeatherDto? cached))
+        {
+            return cached;
         }
 
         try
@@ -34,7 +41,9 @@ public class WeatherService(ILogger<WeatherService> logger) : IWeatherService
             var weatherCode = forecast.Current.Weathercode ?? 0;
 
             var (description, icon) = MapWeatherCode(weatherCode);
-            return new WeatherDto(tempF, description, icon);
+            var result = new WeatherDto(tempF, description, icon);
+            cache.Set(cacheKey, result, TimeSpan.FromMinutes(15));
+            return result;
         }
         catch (Exception ex)
         {

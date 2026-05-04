@@ -12,15 +12,23 @@ public class PublicController(IOfficeService officeService, IAnnouncementService
     [ResponseCache(NoStore = true)]
     public async Task<IActionResult> GetDisplay()
     {
-        var offices = await officeService.GetAllAsync();
-        var announcements = await announcementService.GetActiveAsync();
+        var (offices, announcements, config, todayHoliday) = await (
+            officeService.GetAllAsync(),
+            announcementService.GetActiveAsync(),
+            configService.GetAsync(),
+            holidayService.GetTodayHolidayAsync()
+        );
 
-        var config = await configService.GetAsync();
         var hasCity = !string.IsNullOrWhiteSpace(config.City);
 
-        var weather = hasCity ? await weatherService.GetWeatherAsync(config.City) : null;
-        var backgroundImageUrl = hasCity && config.ShowCityImage ? await cityImageService.GetCityImageUrlAsync(config.City) : null;
-        var todayHoliday = await holidayService.GetTodayHolidayAsync();
+        var (weather, imageUrl) = await (
+            hasCity ? weatherService.GetWeatherAsync(config.City) : Task.FromResult<WeatherDto?>(null),
+            hasCity && config.ShowCityImage
+                ? cityImageService.GetCityImageUrlAsync(config.City)
+                : Task.FromResult<string?>(null)
+        );
+
+        var hasBackgroundImage = imageUrl is not null;
 
         var publicOffices = offices
             .Select(o => new PublicOfficeDto(o.UnitNumber, o.Name, o.Names, o.PhoneNumber, o.Note))
@@ -28,6 +36,6 @@ public class PublicController(IOfficeService officeService, IAnnouncementService
 
         var kioskName = !string.IsNullOrWhiteSpace(config.KioskName) ? config.KioskName : null;
 
-        return Ok(new PublicDisplayDto(publicOffices, announcements, weather, backgroundImageUrl, todayHoliday, kioskName, DateTimeOffset.UtcNow));
+        return Ok(new PublicDisplayDto(publicOffices, announcements, weather, hasBackgroundImage, todayHoliday, kioskName, DateTimeOffset.UtcNow));
     }
 }

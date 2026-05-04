@@ -1,12 +1,19 @@
 using Api.Interfaces;
+using Microsoft.Extensions.Caching.Memory;
 using Newtonsoft.Json.Linq;
 
 namespace Api.Services;
 
-public class HolidayService(IHttpClientFactory httpClientFactory, ILogger<HolidayService> logger) : IHolidayService
+public class HolidayService(IHttpClientFactory httpClientFactory, IMemoryCache cache, ILogger<HolidayService> logger) : IHolidayService
 {
     public async Task<string?> GetTodayHolidayAsync()
     {
+        var cacheKey = $"holiday:{DateTime.Today:yyyy-MM-dd}";
+        if (cache.TryGetValue(cacheKey, out string? cached))
+        {
+            return cached;
+        }
+
         try
         {
             var client = httpClientFactory.CreateClient();
@@ -24,8 +31,12 @@ public class HolidayService(IHttpClientFactory httpClientFactory, ILogger<Holida
 
             if (json["is_public_holiday"]?.Value<bool>() == true)
             {
-                return json["public_holiday_name"]?.ToString();
+                var name = json["public_holiday_name"]?.ToString();
+                cache.Set(cacheKey, name, TimeSpan.FromHours(6));
+                return name;
             }
+
+            cache.Set(cacheKey, (string?)null, TimeSpan.FromHours(6));
         }
         catch (Exception ex)
         {
