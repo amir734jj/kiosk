@@ -16,5 +16,9 @@ COPY --from=build /publish/ui/wwwroot ./wwwroot
 
 ENV ASPNETCORE_URLS=http://+:80
 ENV ASPNETCORE_ENVIRONMENT=Production
+ENV TZ=America/Chicago
+
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends tzdata
 
 ENTRYPOINT ["dotnet", "Api.dll"]

@@ -106,6 +106,7 @@ builder.Services.AddRateLimiter(opt =>
     opt.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
 });
 builder.Services.AddControllers().AddNewtonsoftJson();
+builder.Services.AddRazorPages();
 builder.Services.AddMemoryCache();
 builder.Services.AddHealthChecks();
 builder.Services.AddHttpClient();
@@ -169,6 +170,7 @@ app.UseSerilogRequestLogging(opts =>
 });
 
 app.MapControllers();
+app.MapRazorPages();
 app.MapHealthChecks("/api/health").AllowAnonymous();
 
 app.MapFallback("api/{**rest}", async context =>

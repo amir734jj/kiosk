@@ -1,0 +1,116 @@
+@page "/display"
+@model Api.Pages.DisplayModel
+
+@{
+    Layout = null;
+    var data = Model.Data;
+    var cst = TimeZoneInfo.FindSystemTimeZoneById("America/Chicago");
+    var now = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, cst);
+    var bgStyle = data?.BackgroundImageUrl is not null
+        ? $"background: url('{data.BackgroundImageUrl}') center/cover fixed;"
+        : "background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);";
+}
+
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="dark">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="refresh" content="60" />
+    <title>Office Directory</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet" />
+    <style>
+        body { font-family: 'Roboto', sans-serif; min-height: 100vh; display: flex; flex-direction: column; @bgStyle }
+        .kiosk-header, .kiosk-announce, .kiosk-card { background: var(--bs-dark) !important; }
+        .office-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 1rem; align-content: start; }
+        .unit-badge { background: #e94560; font-size: 1.5rem; font-weight: bold; padding: 0.2rem 0.8rem; border-radius: 8px; }
+    </style>
+</head>
+<body>
+
+    @* ── Header ── *@
+    <nav class="navbar kiosk-header border-bottom border-secondary px-4 py-2">
+        <span class="navbar-brand text-white fs-3 fw-bold mb-0">
+            <i class="bi bi-building me-2"></i>Office Directory
+        </span>
+        <div class="d-flex align-items-center gap-4">
+            @if (data?.Weather is not null)
+            {
+                <div class="d-flex align-items-center gap-2 fs-5">
+                    <i class="bi @data.Weather.Icon"></i>
+                    <span>@($"{data.Weather.TemperatureF:F0}")&deg;F</span>
+                    <span class="text-white-50">@data.Weather.Description</span>
+                </div>
+            }
+            <div class="text-end">
+                <div class="fs-5"><i class="bi bi-clock me-1"></i>@now.ToString("h:mm tt")</div>
+                <small class="text-white-50">@now.ToString("dddd, MMMM d, yyyy")</small>
+                @if (data?.TodayHoliday is not null)
+                {
+                    <div><span class="badge bg-warning text-dark"><i class="bi bi-star-fill me-1"></i>@data.TodayHoliday</span></div>
+                }
+            </div>
+        </div>
+    </nav>
+
+    @* ── Announcements ── *@
+    @if (data?.Announcements.Count > 0)
+    {
+        <div class="kiosk-announce border-bottom border-warning-subtle d-flex align-items-center gap-3 px-4 py-2">
+            <span class="badge bg-warning text-dark fs-6"><i class="bi bi-megaphone-fill me-1"></i>Announcements</span>
+            @foreach (var a in data.Announcements)
+            {
+                <span class="text-warning"><strong>@a.Title</strong> &mdash; @a.Content</span>
+            }
+        </div>
+    }
+
+    @* ── Office Cards ── *@
+    @if (data?.Offices.Count > 0)
+    {
+        <div class="office-grid p-4">
+            @foreach (var o in data.Offices)
+            {
+                <div class="card kiosk-card border-secondary text-center">
+                    <div class="card-body py-2 px-3">
+                        <span class="badge unit-badge mb-2">@o.UnitNumber</span>
+                        <h5 class="card-title mb-1">@o.Name</h5>
+                        @foreach (var name in o.Names)
+                        {
+                            <p class="card-text text-white-50 mb-0"><i class="bi bi-person-fill me-1"></i>@name</p>
+                        }
+                        @if (!string.IsNullOrEmpty(o.PhoneNumber))
+                        {
+                            <p class="card-text text-white-50 mb-0"><i class="bi bi-telephone-fill me-1"></i>@o.PhoneNumber</p>
+                        }
+                        @if (!string.IsNullOrEmpty(o.Note))
+                        {
+                            <p class="card-text text-white-50 mb-0"><i class="bi bi-sticky-fill me-1"></i>@o.Note</p>
+                        }
+                    </div>
+                </div>
+            }
+        </div>
+    }
+    else
+    {
+        <div class="text-center text-white-50 mt-5 fs-5">
+            <i class="bi bi-inbox fs-1"></i><br />No offices configured yet
+        </div>
+    }
+
+    @* ── Footer ── *@
+    <footer class="text-center text-white-50 small py-2 mt-auto">
+        @{
+            var parts = new List<string>();
+            if (!string.IsNullOrEmpty(data?.KioskName)) parts.Add(data.KioskName);
+            parts.Add("Auto-refreshes every 5 minutes");
+        }
+        <span>@string.Join(" • ", parts)</span>
+        <span> \u2022 Last updated: @now.ToString("h:mm:ss tt")</span>
+    </footer>
+
+</body>
+</html>
