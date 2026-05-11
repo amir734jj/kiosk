@@ -9,6 +9,7 @@ public class Office : IEntity
     [Key]
     [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
     public int Id { get; set; }
+    public int? Floor { get; set; }
     public string UnitNumber { get; set; } = string.Empty;
     public string Name { get; set; } = string.Empty;
     public List<string> Names { get; set; } = [];
