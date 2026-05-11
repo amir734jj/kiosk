@@ -31,7 +31,7 @@ public class DisplayModel(IOfficeService officeService, IAnnouncementService ann
         var kioskName = !string.IsNullOrWhiteSpace(config.KioskName) ? config.KioskName : null;
 
         var publicOffices = offices
-            .Select(o => new PublicOfficeDto(o.UnitNumber, o.Name, o.Names, o.PhoneNumber, o.Note))
+            .Select(o => new PublicOfficeDto(o.UnitNumber, o.Name, o.Names, o.PhoneNumber, o.Note, o.Floor))
             .ToList();
 
         Data = new PublicDisplayDto(publicOffices, announcements, weather, hasBackgroundImage, todayHoliday, kioskName, DateTimeOffset.UtcNow);

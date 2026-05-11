@@ -31,7 +31,7 @@ public class OfficesController(IOfficeService officeService, UserManager<AppUser
 
     [HttpPost]
     [Authorize(Roles = Roles.Admin)]
-    public async Task<IActionResult> Create(CreateOfficeRequest req)
+    public async Task<IActionResult> Create(OfficeRequest req)
     {
         if (string.IsNullOrWhiteSpace(req.UnitNumber))
         {
@@ -42,8 +42,6 @@ public class OfficesController(IOfficeService officeService, UserManager<AppUser
         {
             return BadRequest("Office name is required.");
         }
-
-
 
         if (await officeService.ExistsByUnitAsync(req.UnitNumber))
         {
@@ -56,7 +54,7 @@ public class OfficesController(IOfficeService officeService, UserManager<AppUser
 
     [HttpPut("{id:int}")]
     [Authorize(Roles = Roles.Admin)]
-    public async Task<IActionResult> Update(int id, UpdateOfficeRequest req)
+    public async Task<IActionResult> Update(int id, OfficeRequest req)
     {
         if (string.IsNullOrWhiteSpace(req.UnitNumber))
         {
@@ -101,7 +99,7 @@ public class OfficesController(IOfficeService officeService, UserManager<AppUser
     }
 
     [HttpPut("my")]
-    public async Task<IActionResult> UpdateMyOffice(UpdateOfficeRequest req)
+    public async Task<IActionResult> UpdateMyOffice(OfficeRequest req)
     {
         if (string.IsNullOrWhiteSpace(req.Name))
         {

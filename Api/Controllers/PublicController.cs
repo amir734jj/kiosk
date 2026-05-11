@@ -31,7 +31,7 @@ public class PublicController(IOfficeService officeService, IAnnouncementService
         var hasBackgroundImage = imageUrl is not null;
 
         var publicOffices = offices
-            .Select(o => new PublicOfficeDto(o.UnitNumber, o.Name, o.Names, o.PhoneNumber, o.Note))
+            .Select(o => new PublicOfficeDto(o.UnitNumber, o.Name, o.Names, o.PhoneNumber, o.Note, o.Floor))
             .ToList();
 
         var kioskName = !string.IsNullOrWhiteSpace(config.KioskName) ? config.KioskName : null;

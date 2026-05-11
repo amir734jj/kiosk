@@ -12,7 +12,7 @@ public sealed class OfficeService(IEfRepository repository) : IOfficeService
     private IBasicCrud<Office> Dal => repository.For<Office>();
 
     private static OfficeDto ToDto(Office o) =>
-        new(o.Id, o.UnitNumber, o.Name, o.Names, PhoneUtility.FormatForDisplay(o.PhoneNumber), o.Note, o.CreatedAt);
+        new(o.Id, o.Floor, o.UnitNumber, o.Name, o.Names, PhoneUtility.FormatForDisplay(o.PhoneNumber), o.Note, o.CreatedAt);
 
     public async Task<List<OfficeDto>> GetAllAsync()
     {
@@ -30,10 +30,11 @@ public sealed class OfficeService(IEfRepository repository) : IOfficeService
         return items.Count > 0 ? ToDto(items.First()) : null;
     }
 
-    public async Task<OfficeDto> CreateAsync(CreateOfficeRequest req)
+    public async Task<OfficeDto> CreateAsync(OfficeRequest req)
     {
         var entity = await Dal.Save(new Office
         {
+            Floor = req.Floor,
             UnitNumber = req.UnitNumber.Trim(),
             Name = req.Name.Trim(),
             Names = req.Names ?? [],
@@ -43,7 +44,7 @@ public sealed class OfficeService(IEfRepository repository) : IOfficeService
         return ToDto(entity);
     }
 
-    public async Task<bool> UpdateAsync(int id, UpdateOfficeRequest req)
+    public async Task<bool> UpdateAsync(int id, OfficeRequest req)
     {
         var items = (await Dal.GetAll(
             filterExprs: [o => o.Id == id],
@@ -56,6 +57,7 @@ public sealed class OfficeService(IEfRepository repository) : IOfficeService
 
         await Dal.Update(items.First().Id, o =>
         {
+            o.Floor = req.Floor;
             o.UnitNumber = req.UnitNumber.Trim();
             o.Name = req.Name.Trim();
             o.Names = req.Names ?? [];
@@ -65,7 +67,7 @@ public sealed class OfficeService(IEfRepository repository) : IOfficeService
         return true;
     }
 
-    public async Task<bool> UpdateMyAsync(int officeId, UpdateOfficeRequest req)
+    public async Task<bool> UpdateMyAsync(int officeId, OfficeRequest req)
     {
         var items = (await Dal.GetAll(
             filterExprs: [o => o.Id == officeId],
@@ -78,6 +80,7 @@ public sealed class OfficeService(IEfRepository repository) : IOfficeService
 
         await Dal.Update(items.First().Id, o =>
         {
+            o.Floor = req.Floor;
             o.Name = req.Name.Trim();
             o.Names = req.Names ?? [];
             o.PhoneNumber = PhoneUtility.NormalizePhoneNumber(req.PhoneNumber);

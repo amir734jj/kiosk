@@ -80,19 +80,19 @@ public sealed class ApiService(
         catch { return null; }
     }
 
-    public async Task<(bool Ok, string? Error)> CreateOfficeAsync(CreateOfficeRequest req)
+    public async Task<(bool Ok, string? Error)> CreateOfficeAsync(OfficeRequest req)
     {
         try { await officesApi.CreateAsync(req); return (true, null); }
         catch (ApiException ex) { return (false, ex.Content); }
     }
 
-    public async Task<bool> UpdateOfficeAsync(int id, UpdateOfficeRequest req)
+    public async Task<bool> UpdateOfficeAsync(int id, OfficeRequest req)
     {
         try { await officesApi.UpdateAsync(id, req); return true; }
         catch { return false; }
     }
 
-    public async Task<bool> UpdateMyOfficeAsync(UpdateOfficeRequest req)
+    public async Task<bool> UpdateMyOfficeAsync(OfficeRequest req)
     {
         try { await officesApi.UpdateMyAsync(req); return true; }
         catch { return false; }

@@ -25,6 +25,9 @@
                 <div class="col-md-2">
                     <HxInputText Label="Unit Number" @bind-Value="_formUnit" Placeholder="e.g. 101" />
                 </div>
+                <div class="col-md-1">
+                    <HxInputNumber Label="Floor" @bind-Value="_formFloor" Min="1" Placeholder="e.g. 2" />
+                </div>
                 <div class="col-md-3">
                     <HxInputText Label="Office Name" @bind-Value="_formName" Placeholder="e.g. Smile Dental" />
                 </div>
@@ -93,6 +96,7 @@ else
     private bool _showForm;
     private int? _editId;
     private string _formUnit = "";
+    private int? _formFloor;
     private string _formName = "";
     private List<string> _formNames = [];
     private string? _formPhone;
@@ -107,6 +111,7 @@ else
     {
         _editId = o.Id;
         _formUnit = o.UnitNumber;
+        _formFloor = o.Floor;
         _formName = o.Name;
         _formNames = o.Names.ToList();
         _formPhone = o.PhoneNumber;
@@ -119,6 +124,7 @@ else
         _showForm = false;
         _editId = null;
         _formUnit = "";
+        _formFloor = null;
         _formName = "";
         _formNames = [];
         _formPhone = null;
@@ -130,12 +136,12 @@ else
         _error = null;
         if (_editId.HasValue)
         {
-            var ok = await Api.UpdateOfficeAsync(_editId.Value, new UpdateOfficeRequest(_formUnit, _formName, _formNames, _formPhone, _formNote));
+            var ok = await Api.UpdateOfficeAsync(_editId.Value, new OfficeRequest(_formUnit, _formName, _formNames, _formPhone, _formNote, _formFloor));
             if (!ok) { _error = "Failed to update office."; return; }
         }
         else
         {
-            var (ok, error) = await Api.CreateOfficeAsync(new CreateOfficeRequest(_formUnit, _formName, _formNames, _formPhone, _formNote));
+            var (ok, error) = await Api.CreateOfficeAsync(new OfficeRequest(_formUnit, _formName, _formNames, _formPhone, _formNote, _formFloor));
             if (!ok) { _error = error; return; }
         }
         CancelForm();

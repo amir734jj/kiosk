@@ -15,13 +15,13 @@ public interface IOfficesApi
     Task<OfficeDto> GetMyAsync();
 
     [Post("/api/offices")]
-    Task<OfficeDto> CreateAsync([Body] CreateOfficeRequest request);
+    Task<OfficeDto> CreateAsync([Body] OfficeRequest request);
 
     [Put("/api/offices/{id}")]
-    Task UpdateAsync(int id, [Body] UpdateOfficeRequest request);
+    Task UpdateAsync(int id, [Body] OfficeRequest request);
 
     [Put("/api/offices/my")]
-    Task UpdateMyAsync([Body] UpdateOfficeRequest request);
+    Task UpdateMyAsync([Body] OfficeRequest request);
 
     [Delete("/api/offices/{id}")]
     Task DeleteAsync(int id);

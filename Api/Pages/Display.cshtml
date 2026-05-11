@@ -76,6 +76,10 @@
                 <div class="card kiosk-card border-secondary text-center">
                     <div class="card-body py-2 px-3">
                         <span class="badge unit-badge mb-2">@o.UnitNumber</span>
+                        @if (o.Floor.HasValue)
+                        {
+                            <p class="card-text text-white-50 mb-1"><i class="bi bi-layers-fill me-1"></i>Floor @o.Floor</p>
+                        }
                         <h5 class="card-title mb-1">@o.Name</h5>
                         @foreach (var name in o.Names)
                         {

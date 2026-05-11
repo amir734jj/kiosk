@@ -38,6 +38,9 @@ else
                     <input value="@_office.UnitNumber" class="form-control" disabled />
                     <small class="text-muted">Contact admin to change unit number</small>
                 </div>
+                <div class="col-md-1">
+                    <HxInputNumber Label="Floor" @bind-Value="_floor" Min="1" Placeholder="e.g. 2" />
+                </div>
                 <div class="col-md-3">
                     <HxInputText Label="Office Name" @bind-Value="_name" />
                 </div>
@@ -64,6 +67,7 @@ else
     private OfficeDto? _office;
     private string _name = "";
     private List<string> _names = [];
+    private int? _floor;
     private string? _phone;
     private string? _note;
     private bool _loading = true;
@@ -80,6 +84,7 @@ else
             {
                 _name = _office.Name;
                 _names = _office.Names.ToList();
+                _floor = _office.Floor;
                 _phone = _office.PhoneNumber;
                 _note = _office.Note;
             }
@@ -95,7 +100,7 @@ else
         _saving = true;
         try
         {
-            var ok = await Api.UpdateMyOfficeAsync(new UpdateOfficeRequest(_office!.UnitNumber, _name, _names, _phone, _note));
+            var ok = await Api.UpdateMyOfficeAsync(new OfficeRequest(_office!.UnitNumber, _name, _names, _phone, _note, _floor));
             if (ok)
             {
                 _success = "Office updated successfully.";
