@@ -64,6 +64,7 @@ else
             <thead class="table-dark">
                 <tr>
                     <th>Unit #</th>
+                    <th>Floor</th>
                     <th>Name</th>
                     <th>Name(s)</th>
                     <th>Phone</th>
@@ -76,6 +77,7 @@ else
                 {
                     <tr>
                         <td><HxBadge Color="ThemeColor.Primary" CssClass="fs-6">@o.UnitNumber</HxBadge></td>
+                        <td>@(o.Floor?.ToString() ?? "—")</td>
                         <td>@o.Name</td>
                         <td>@(o.Names.Count > 0 ? string.Join(", ", o.Names) : "—")</td>
                         <td>@(o.PhoneNumber ?? "—")</td>

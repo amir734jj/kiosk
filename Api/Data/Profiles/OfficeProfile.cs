@@ -7,6 +7,7 @@ public class OfficeProfile : EntityProfile<Office>
 {
     public OfficeProfile()
     {
+        Map(x => x.Floor);
         Map(x => x.UnitNumber);
         Map(x => x.Name);
         Map(x => x.Names);
