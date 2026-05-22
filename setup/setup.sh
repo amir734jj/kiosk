@@ -16,7 +16,7 @@ echo "Display URL: $APP_URL"
 # Install dependencies
 echo "Installing Chromium and utilities..."
 sudo apt-get update -qq
-sudo apt-get install -y -qq chromium-browser unclutter
+sudo apt-get install -y -qq chromium unclutter
 
 # Create kiosk directory
 sudo mkdir -p "$KIOSK_DIR"
@@ -38,7 +38,7 @@ xset s noblank
 unclutter -idle 0.5 -root &
 
 # Launch Chromium in kiosk mode
-chromium-browser \\
+chromium \\
     --noerrdialogs \\
     --disable-infobars \\
     --kiosk \\
