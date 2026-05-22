@@ -54,7 +54,7 @@ SCRIPT
 sudo chmod +x "$KIOSK_DIR/start.sh"
 
 # Add cron job for weekly Chromium update + reboot (Sunday 3am)
-(crontab -l 2>/dev/null | grep -v 'apt-get.*chromium'; echo "0 3 * * 0 sudo apt-get update -qq && sudo apt-get upgrade -y -qq chromium-browser && sudo reboot") | crontab -
+(crontab -l 2>/dev/null | grep -v 'apt-get.*chromium'; echo "0 3 * * 0 sudo apt-get update -qq && sudo apt-get upgrade -y -qq chromium && sudo reboot") | crontab -
 
 # Configure autostart (LXDE - Raspberry Pi OS)
 mkdir -p "$HOME/.config/lxsession/LXDE-pi"
