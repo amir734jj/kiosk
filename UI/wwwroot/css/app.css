@@ -1,5 +1,6 @@
 html, body {
     font-family: 'Roboto', sans-serif;
+    zoom: 120%;
 }
 
 .valid.modified:not([type=checkbox]) {

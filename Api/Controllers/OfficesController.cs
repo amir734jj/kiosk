@@ -43,11 +43,6 @@ public class OfficesController(IOfficeService officeService, UserManager<AppUser
             return BadRequest("Office name is required.");
         }
 
-        if (await officeService.ExistsByUnitAsync(req.UnitNumber))
-        {
-            return Conflict($"Unit '{req.UnitNumber}' already exists.");
-        }
-
         var office = await officeService.CreateAsync(req);
         return Ok(office);
     }
@@ -67,11 +62,6 @@ public class OfficesController(IOfficeService officeService, UserManager<AppUser
         }
 
 
-
-        if (await officeService.ExistsByUnitAsync(req.UnitNumber, id))
-        {
-            return Conflict($"Unit '{req.UnitNumber}' already exists.");
-        }
 
         var updated = await officeService.UpdateAsync(id, req);
         return updated ? NoContent() : NotFound();
