@@ -71,7 +71,7 @@
     @if (data?.Offices.Count > 0)
     {
         <div class="office-grid p-4">
-            @foreach (var o in data.Offices)
+            @foreach (var o in data.Offices.OrderBy(x => x.UnitNumber))
             {
                 <div class="card kiosk-card border-secondary text-center">
                     <div class="card-body py-2 px-3">
