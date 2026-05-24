@@ -110,4 +110,14 @@ public class CityImageService(IHttpClientFactory httpClientFactory, IMemoryCache
 
         return null;
     }
+
+    public async Task<(byte[] Data, string ContentType)> GetStaticImageAsync()
+    {
+        var file = Directory.GetFiles("Images").Shuffle().Take(1).First();
+        
+        var extension = Path.GetExtension(file);
+        var imageBytes = await File.ReadAllBytesAsync(file);
+            
+        return (Data: imageBytes, ContentType: $"image/{extension}");
+    }
 }

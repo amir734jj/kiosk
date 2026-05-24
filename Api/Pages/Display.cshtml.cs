@@ -18,15 +18,10 @@ public class DisplayModel(IOfficeService officeService, IAnnouncementService ann
         var hasCity = !string.IsNullOrWhiteSpace(config.City);
 
         // External API calls — parallel
-        var (weather, imageUrl, todayHoliday) = await (
+        var (weather, todayHoliday) = await (
             hasCity ? weatherService.GetWeatherAsync(config.City) : Task.FromResult<WeatherDto?>(null),
-            hasCity && config.ShowCityImage
-                ? cityImageService.GetCityImageUrlAsync(config.City)
-                : Task.FromResult<string?>(null),
             holidayService.GetTodayHolidayAsync()
         );
-
-        var hasBackgroundImage = imageUrl is not null;
 
         var kioskName = !string.IsNullOrWhiteSpace(config.KioskName) ? config.KioskName : null;
 
@@ -34,6 +29,6 @@ public class DisplayModel(IOfficeService officeService, IAnnouncementService ann
             .Select(o => new PublicOfficeDto(o.UnitNumber, o.Name, o.Names, o.PhoneNumber, o.Note, o.Floor))
             .ToList();
 
-        Data = new PublicDisplayDto(publicOffices, announcements, weather, hasBackgroundImage, todayHoliday, kioskName, DateTimeOffset.UtcNow);
+        Data = new PublicDisplayDto(publicOffices, announcements, weather, true, todayHoliday, kioskName, DateTimeOffset.UtcNow);
     }
 }

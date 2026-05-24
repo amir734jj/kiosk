@@ -10,4 +10,7 @@ public class GlobalConfigModel
 
     [GlobalConfigCol(Name = "KIOSK_NAME")]
     public string KioskName { get; set; } = string.Empty;
+    
+    [GlobalConfigCol(Name = "USE_PUBLIC_IMAGE")]
+    public bool UsePublicImage { get; set; } = false;
 }
