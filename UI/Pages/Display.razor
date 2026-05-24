@@ -1,0 +1,505 @@
+@page "/display"
+@inject ApiService Api
+@inject NavigationManager Nav
+@implements IDisposable
+
+<PageTitle>Kiosk Display</PageTitle>
+
+<style>
+    @@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&display=swap');
+
+    .kiosk-root {
+        position: fixed;
+        inset: 0;
+        background: #0a0f1e;
+        color: #fff;
+        font-family: 'DM Sans', sans-serif;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+    }
+
+    /* Background image layer */
+    .kiosk-bg {
+        position: absolute;
+        inset: 0;
+        background-size: cover;
+        background-position: center;
+        background-repeat: no-repeat;
+        transition: opacity 1.5s ease;
+        opacity: 0;
+    }
+    .kiosk-bg.loaded { opacity: 1; }
+
+    /* Gradient overlay so text is always readable */
+    .kiosk-overlay {
+        position: absolute;
+        inset: 0;
+        background:
+            linear-gradient(to right, rgba(5,10,30,0.92) 0%, rgba(5,10,30,0.75) 55%, rgba(5,10,30,0.45) 100%),
+            linear-gradient(to top, rgba(5,10,30,0.6) 0%, transparent 40%);
+    }
+
+    /* All content sits above bg */
+    .kiosk-content {
+        position: relative;
+        z-index: 2;
+        display: flex;
+        flex-direction: column;
+        height: 100vh;
+        padding: 2.5rem 3rem 2rem;
+        box-sizing: border-box;
+    }
+
+    /* ── HEADER ── */
+    .kiosk-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        flex-shrink: 0;
+        margin-bottom: 2rem;
+    }
+
+    .kiosk-title {
+        font-family: 'Bebas Neue', sans-serif;
+        font-size: clamp(3rem, 5vw, 5.5rem);
+        line-height: 1;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        color: #fff;
+        text-shadow: 0 2px 20px rgba(0,0,0,0.5);
+    }
+
+    .kiosk-title span {
+        color: #5bc8f5;
+    }
+
+    .kiosk-meta {
+        text-align: right;
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+        gap: 0.3rem;
+    }
+
+    .kiosk-time {
+        font-family: 'Bebas Neue', sans-serif;
+        font-size: clamp(3.5rem, 6vw, 6.5rem);
+        line-height: 1;
+        letter-spacing: 0.04em;
+        color: #fff;
+        text-shadow: 0 2px 20px rgba(0,0,0,0.4);
+    }
+
+    .kiosk-date {
+        font-size: clamp(1.1rem, 1.8vw, 1.6rem);
+        color: rgba(255,255,255,0.7);
+        font-weight: 300;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+    }
+
+    .kiosk-weather {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: clamp(1.1rem, 1.8vw, 1.5rem);
+        color: rgba(255,255,255,0.85);
+        margin-top: 0.3rem;
+    }
+
+    .kiosk-holiday {
+        font-size: clamp(0.9rem, 1.4vw, 1.2rem);
+        background: rgba(91,200,245,0.18);
+        border: 1px solid rgba(91,200,245,0.4);
+        color: #5bc8f5;
+        padding: 0.2rem 0.9rem;
+        border-radius: 2rem;
+        letter-spacing: 0.05em;
+        margin-top: 0.3rem;
+    }
+
+    /* ── MAIN BODY ── */
+    .kiosk-body {
+        display: flex;
+        flex: 1;
+        gap: 2.5rem;
+        min-height: 0;
+    }
+
+    /* ── OFFICE DIRECTORY ── */
+    .offices-panel {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
+    }
+
+    .section-label {
+        font-size: clamp(0.75rem, 1.1vw, 1rem);
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+        color: rgba(255,255,255,0.45);
+        margin-bottom: 1rem;
+        font-weight: 500;
+    }
+
+    .offices-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(clamp(260px, 22vw, 340px), 1fr));
+        gap: 0.9rem;
+        overflow-y: auto;
+        flex: 1;
+        align-content: start;
+        padding-right: 0.5rem;
+    }
+
+    .offices-grid::-webkit-scrollbar { width: 4px; }
+    .offices-grid::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 2px; }
+
+    .office-card {
+        background: rgba(255,255,255,0.07);
+        border: 1px solid rgba(255,255,255,0.12);
+        border-left: 4px solid #5bc8f5;
+        border-radius: 0.6rem;
+        padding: 1rem 1.3rem;
+        backdrop-filter: blur(12px);
+        transition: background 0.2s;
+    }
+
+    .office-card:hover {
+        background: rgba(255,255,255,0.11);
+    }
+
+    .office-unit {
+        font-family: 'Bebas Neue', sans-serif;
+        font-size: clamp(2rem, 3.2vw, 3.2rem);
+        line-height: 1;
+        color: #5bc8f5;
+        letter-spacing: 0.06em;
+    }
+
+    .office-name {
+        font-size: clamp(1.2rem, 1.8vw, 1.9rem);
+        font-weight: 600;
+        line-height: 1.2;
+        color: #fff;
+        margin-top: 0.15rem;
+    }
+
+    .office-names {
+        font-size: clamp(0.85rem, 1.2vw, 1.15rem);
+        color: rgba(255,255,255,0.6);
+        font-weight: 300;
+        margin-top: 0.25rem;
+        line-height: 1.4;
+    }
+
+    .office-phone {
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+        font-size: clamp(1rem, 1.4vw, 1.35rem);
+        color: rgba(255,255,255,0.8);
+        margin-top: 0.4rem;
+        font-weight: 500;
+    }
+
+    .office-phone i { color: #5bc8f5; font-size: 0.9em; }
+
+    .office-floor {
+        display: inline-block;
+        font-size: clamp(0.75rem, 1vw, 0.9rem);
+        background: rgba(255,255,255,0.12);
+        color: rgba(255,255,255,0.6);
+        padding: 0.1rem 0.55rem;
+        border-radius: 0.3rem;
+        margin-top: 0.35rem;
+        letter-spacing: 0.05em;
+    }
+
+    .office-note {
+        font-size: clamp(0.75rem, 1vw, 0.9rem);
+        color: rgba(255,255,255,0.45);
+        font-style: italic;
+        margin-top: 0.2rem;
+    }
+
+    /* ── RIGHT SIDEBAR ── */
+    .sidebar-panel {
+        width: clamp(260px, 22vw, 350px);
+        display: flex;
+        flex-direction: column;
+        gap: 1.5rem;
+        flex-shrink: 0;
+    }
+
+    .announcement-list {
+        display: flex;
+        flex-direction: column;
+        gap: 0.7rem;
+        overflow-y: auto;
+        flex: 1;
+    }
+
+    .announcement-card {
+        background: rgba(255, 220, 80, 0.08);
+        border: 1px solid rgba(255, 220, 80, 0.25);
+        border-left: 4px solid #ffd84d;
+        border-radius: 0.6rem;
+        padding: 0.9rem 1.1rem;
+        backdrop-filter: blur(12px);
+    }
+
+    .announcement-card .ann-title {
+        font-size: clamp(1rem, 1.4vw, 1.3rem);
+        font-weight: 600;
+        color: #ffd84d;
+        margin-bottom: 0.3rem;
+    }
+
+    .announcement-card .ann-body {
+        font-size: clamp(0.8rem, 1.1vw, 1.05rem);
+        color: rgba(255,255,255,0.75);
+        line-height: 1.5;
+        font-weight: 300;
+    }
+
+    /* ── FOOTER ── */
+    .kiosk-footer {
+        flex-shrink: 0;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-top: 1.5rem;
+        padding-top: 1rem;
+        border-top: 1px solid rgba(255,255,255,0.1);
+    }
+
+    .footer-brand {
+        font-family: 'Bebas Neue', sans-serif;
+        font-size: clamp(1rem, 1.5vw, 1.4rem);
+        letter-spacing: 0.12em;
+        color: rgba(255,255,255,0.35);
+    }
+
+    .footer-status {
+        font-size: clamp(0.65rem, 0.9vw, 0.85rem);
+        color: rgba(255,255,255,0.25);
+        letter-spacing: 0.06em;
+    }
+
+    /* ── LOADING / ERROR ── */
+    .kiosk-loading {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 1.5rem;
+        z-index: 10;
+        background: #0a0f1e;
+    }
+
+    .kiosk-loading .spinner-border {
+        width: 3rem;
+        height: 3rem;
+        border-color: #5bc8f5;
+        border-right-color: transparent;
+    }
+
+    .kiosk-loading p {
+        font-size: 1.1rem;
+        color: rgba(255,255,255,0.4);
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+    }
+
+    /* Animate cards in on load */
+    @@keyframes fadeUp {
+        from { opacity: 0; transform: translateY(16px); }
+        to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .office-card, .announcement-card {
+        animation: fadeUp 0.4s ease both;
+    }
+</style>
+
+<div class="kiosk-root">
+    <!-- Background image -->
+    <div class="kiosk-bg @(_bgLoaded ? "loaded" : "")"
+         style="@(_display?.HasBackgroundImage == true ? "background-image: url('/api/public/background')" : "")">
+    </div>
+    <div class="kiosk-overlay"></div>
+
+    @if (_loading)
+    {
+        <div class="kiosk-loading">
+            <div class="spinner-border" role="status"></div>
+            <p>Loading display&hellip;</p>
+        </div>
+    }
+    else
+    {
+        <div class="kiosk-content">
+            <!-- Header -->
+            <div class="kiosk-header">
+                <div>
+                    @if (!string.IsNullOrEmpty(_display?.KioskName))
+                    {
+                        <div class="kiosk-title">@_display.KioskName</div>
+                    }
+                    else
+                    {
+                        <div class="kiosk-title">Office <span>Directory</span></div>
+                    }
+                </div>
+
+                <div class="kiosk-meta">
+                    <div class="kiosk-time">@_now.ToString("h:mm tt")</div>
+                    <div class="kiosk-date">@_now.ToString("dddd, MMMM d")</div>
+                    @if (_display?.Weather is not null)
+                    {
+                        <div class="kiosk-weather">
+                            <span>@_display.Weather.Icon</span>
+                            <span>@Math.Round(_display.Weather.TemperatureF)°F</span>
+                            <span style="color:rgba(255,255,255,0.5); font-size:0.85em">· @_display.Weather.Description</span>
+                        </div>
+                    }
+                    @if (!string.IsNullOrEmpty(_display?.TodayHoliday))
+                    {
+                        <div class="kiosk-holiday">🎉 @_display.TodayHoliday</div>
+                    }
+                </div>
+            </div>
+
+            <!-- Body -->
+            <div class="kiosk-body">
+                <!-- Offices -->
+                <div class="offices-panel">
+                    <div class="section-label">Offices &amp; Tenants</div>
+                    @if (_display?.Offices is { Count: > 0 })
+                    {
+                        <div class="offices-grid">
+                            @foreach (var (office, i) in _display.Offices.Select((o, i) => (o, i)))
+                            {
+                                <div class="office-card" style="animation-delay: @(i * 40)ms">
+                                    <div class="office-unit">@office.UnitNumber</div>
+                                    <div class="office-name">@office.Name</div>
+                                    @if (office.Names?.Count > 0)
+                                    {
+                                        <div class="office-names">@string.Join(" · ", office.Names)</div>
+                                    }
+                                    @if (!string.IsNullOrEmpty(office.PhoneNumber))
+                                    {
+                                        <div class="office-phone">
+                                            <i class="bi bi-telephone-fill"></i>
+                                            @office.PhoneNumber
+                                        </div>
+                                    }
+                                    @if (office.Floor.HasValue)
+                                    {
+                                        <span class="office-floor">Floor @office.Floor</span>
+                                    }
+                                    @if (!string.IsNullOrEmpty(office.Note))
+                                    {
+                                        <div class="office-note">@office.Note</div>
+                                    }
+                                </div>
+                            }
+                        </div>
+                    }
+                    else
+                    {
+                        <p style="color:rgba(255,255,255,0.35); font-size:1.1rem; margin-top:1rem;">No offices listed yet.</p>
+                    }
+                </div>
+
+                <!-- Announcements sidebar -->
+                @if (_display?.Announcements is { Count: > 0 })
+                {
+                    <div class="sidebar-panel">
+                        <div class="section-label">Announcements</div>
+                        <div class="announcement-list">
+                            @foreach (var (ann, i) in _display.Announcements.Select((a, i) => (a, i)))
+                            {
+                                <div class="announcement-card" style="animation-delay: @(i * 60 + 100)ms">
+                                    <div class="ann-title">@ann.Title</div>
+                                    <div class="ann-body">@ann.Content</div>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                }
+            </div>
+
+            <!-- Footer -->
+            <div class="kiosk-footer">
+                <div class="footer-brand">Office Kiosk</div>
+                <div class="footer-status">Updated @_display?.GeneratedAt.ToLocalTime().ToString("h:mm tt") · refreshes every 5 min</div>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private PublicDisplayDto? _display;
+    private bool _loading = true;
+    private bool _bgLoaded;
+    private DateTime _now = DateTime.Now;
+
+    private Timer? _clockTimer;
+    private Timer? _refreshTimer;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadDisplayAsync();
+
+        // Clock ticks every second
+        _clockTimer = new Timer(_ =>
+        {
+            _now = DateTime.Now;
+            InvokeAsync(StateHasChanged);
+        }, null, 0, 1000);
+
+        // Data refreshes every 5 minutes
+        _refreshTimer = new Timer(async _ =>
+        {
+            await LoadDisplayAsync();
+            await InvokeAsync(StateHasChanged);
+        }, null, TimeSpan.FromMinutes(5), TimeSpan.FromMinutes(5));
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && _display?.HasBackgroundImage == true)
+        {
+            // Small delay so the image has a moment to load before fading in
+            await Task.Delay(300);
+            _bgLoaded = true;
+            StateHasChanged();
+        }
+    }
+
+    private async Task LoadDisplayAsync()
+    {
+        try
+        {
+            _display = await Api.GetPublicDisplayAsync();
+            _bgLoaded = false; // will re-trigger fade on refresh
+        }
+        catch { /* silently keep old data on error */ }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    public void Dispose()
+    {
+        _clockTimer?.Dispose();
+        _refreshTimer?.Dispose();
+    }
+}
