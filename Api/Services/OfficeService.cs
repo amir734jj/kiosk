@@ -104,13 +104,4 @@ public sealed class OfficeService(IEfRepository repository) : IOfficeService
         return true;
     }
 
-    public async Task<bool> ExistsByUnitAsync(string unitNumber)
-    {
-        return await Dal.Any([o => o.UnitNumber == unitNumber.Trim()]);
-    }
-
-    public async Task<bool> ExistsByUnitAsync(string unitNumber, int excludeId)
-    {
-        return await Dal.Any([o => o.UnitNumber == unitNumber.Trim() && o.Id != excludeId]);
-    }
 }

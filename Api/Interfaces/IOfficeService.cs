@@ -10,6 +10,4 @@ public interface IOfficeService
     Task<bool> UpdateAsync(int id, OfficeRequest req);
     Task<bool> UpdateMyAsync(int officeId, OfficeRequest req);
     Task<bool> DeleteAsync(int id);
-    Task<bool> ExistsByUnitAsync(string unitNumber);
-    Task<bool> ExistsByUnitAsync(string unitNumber, int excludeId);
 }
