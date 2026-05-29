@@ -125,7 +125,8 @@ if (!string.IsNullOrEmpty(spacesKey) && !string.IsNullOrEmpty(spacesSecret) && !
         {
             ServiceURL = spacesEndpoint,
             ForcePathStyle = true,
-            RequestChecksumCalculation = RequestChecksumCalculation.WHEN_REQUIRED
+            RequestChecksumCalculation = RequestChecksumCalculation.WHEN_REQUIRED,
+            ResponseChecksumValidation = ResponseChecksumValidation.WHEN_REQUIRED
         }));
     builder.Services.AddSingleton<ISpaceStorage, S3SpaceStorage>();
     Log.Information("Using S3 storage at {Endpoint}", spacesEndpoint);
