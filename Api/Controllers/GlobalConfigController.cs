@@ -61,6 +61,7 @@ public sealed class GlobalConfigController(IGlobalConfigService configService, I
         return Ok(images);
     }
 
+    [AllowAnonymous]
     [HttpGet("background-image/{id}")]
     public async Task<IActionResult> DownloadBackgroundImage(string id)
     {
