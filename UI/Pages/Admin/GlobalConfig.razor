@@ -2,7 +2,6 @@
 @inject ApiService Api
 @inject AuthService Auth
 @using Refit
-@inject IJSRuntime Js
 
 <PageTitle>Global Config</PageTitle>
 
@@ -68,11 +67,9 @@ else if (_config is not null)
             </div>
             <div class="row g-3 mt-1">
                 <div class="col-md-6">
-                    <HxInputFile Label="Upload Background Image"
-                                 Accept="@ImageUpload.AcceptAttribute"
-                                 MaxFileSize="@ImageUpload.MaxFileSize"
-                                 OnChange="OnFileSelected"
-                                 Hint="JPEG, PNG, or WebP — max 10 MB." />
+                    <label class="form-label">Upload Background Image</label>
+                    <InputFile OnChange="OnFileSelected" accept="@ImageUpload.AcceptAttribute" class="form-control" />
+                    <div class="form-text">JPEG, PNG, or WebP — max 10 MB.</div>
                     @if (_uploading)
                     {
                         <div class="mt-2"><HxSpinner Size="SpinnerSize.Small" CssClass="me-1" /> Uploading…</div>
@@ -97,7 +94,7 @@ else if (_config is not null)
                                 {
                                     <li class="list-group-item d-flex justify-content-between align-items-center">
                                         <div>
-                                            <a href="#" @onclick="() => DownloadImage(img)" @onclick:preventDefault class="fw-bold text-decoration-none">
+                                            <a href="api/global-config/background-image/@img.Id" target="_blank" class="fw-bold text-decoration-none">
                                                 <i class="bi bi-download me-1"></i>@img.OriginalFileName
                                             </a>
                                             <small class="text-muted ms-2">@img.ContentType</small>
@@ -169,6 +166,12 @@ else if (_config is not null)
         try
         {
             var file = args.File;
+            if (file.Size > ImageUpload.MaxFileSize)
+            {
+                _uploadError = "File must be under 10 MB.";
+                return;
+            }
+
             using var stream = file.OpenReadStream(maxAllowedSize: ImageUpload.MaxFileSize);
             var part = new StreamPart(stream, file.Name, file.ContentType);
             await Api.UploadBackgroundImageAsync(part);
@@ -197,15 +200,5 @@ else if (_config is not null)
         }
         catch { _error = "Failed to delete image."; }
         finally { _deleting = false; }
-    }
-
-    private async Task DownloadImage(BackgroundImageDto img)
-    {
-        try
-        {
-            var url = $"api/global-config/background-image/{img.Id}";
-            await Js.InvokeVoidAsync("downloadFileFromUrl", url, img.OriginalFileName, Auth.Token);
-        }
-        catch { _error = "Failed to download image."; }
     }
 }
