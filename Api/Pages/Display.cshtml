@@ -7,7 +7,7 @@
     var cst = TimeZoneInfo.FindSystemTimeZoneById("America/Chicago");
     var now = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, cst);
     var bgStyle = data?.HasBackgroundImage == true
-        ? "background: url('/api/public/background') center/cover fixed;"
+        ? "background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%) center/cover fixed; background: url('/api/public/background') center/cover fixed, linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);"
         : "background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);";
 }
 
@@ -114,7 +114,12 @@
                 parts.Add(data.KioskName);
             }
             var interval = data?.RefreshIntervalSeconds ?? 60;
-            var refreshText = interval >= 60 ? $"Auto-refreshes every {interval / 60} min" : $"Auto-refreshes every {interval}s";
+            var refreshText = interval switch
+            {
+                >= 60 when interval % 60 == 0 => $"Auto-refreshes every {interval / 60} min",
+                >= 60 => $"Auto-refreshes every {interval / 60}m {interval % 60}s",
+                _ => $"Auto-refreshes every {interval}s"
+            };
             parts.Add(refreshText);
         }
         <span>@string.Join(" • ", parts)</span>

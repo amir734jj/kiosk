@@ -8,6 +8,7 @@ namespace Api.Controllers;
 [Route("api/public")]
 public class PublicImageController(
     ICityImageService cityImageService,
+    IBackgroundImageStore backgroundImageStore,
     IGlobalConfigService configService,
     IHttpClientFactory httpClientFactory,
     ILogger<PublicImageController> logger) : ControllerBase
@@ -18,46 +19,55 @@ public class PublicImageController(
     {
         var config = await configService.GetAsync();
 
-        if (config.BackgroundStyle == BackgroundStyle.CityPhoto)
+        try
         {
-            if (string.IsNullOrWhiteSpace(config.City))
+            return config.BackgroundStyle switch
             {
-                return NotFound();
-            }
-
-            var imageUrl = await cityImageService.GetCityImageUrlAsync(config.City);
-            if (string.IsNullOrEmpty(imageUrl))
-            {
-                return NotFound();
-            }
-
-            try
-            {
-                var client = httpClientFactory.CreateClient();
-                client.DefaultRequestHeaders.UserAgent.ParseAdd("KioskApp/1.0");
-                var resp = await client.GetAsync(imageUrl);
-                if (!resp.IsSuccessStatusCode)
-                {
-                    return NotFound();
-                }
-
-                var contentType = resp.Content.Headers.ContentType?.ToString() ?? "image/jpeg";
-                var bytes = await resp.Content.ReadAsByteArrayAsync();
-                return File(bytes, contentType);
-            }
-            catch (Exception ex)
-            {
-                logger.LogWarning(ex, "Failed to proxy background image");
-                return NotFound();
-            }
+                BackgroundStyle.CityPhoto => await GetCityPhoto(config.City),
+                BackgroundStyle.StaticPhoto => await GetStaticPhoto(),
+                BackgroundStyle.UploadedImage => await GetUploadedImage(),
+                _ => NotFound()
+            };
         }
-
-        if (config.BackgroundStyle == BackgroundStyle.StaticPhoto)
+        catch (Exception ex)
         {
-            var result = await cityImageService.GetStaticImageAsync();
-            return File(result.Data, result.ContentType);
+            logger.LogWarning(ex, "Background image failed for style {Style}, falling back", config.BackgroundStyle);
+            return NotFound();
         }
+    }
 
-        return NotFound();
+    private async Task<IActionResult> GetCityPhoto(string? city)
+    {
+        if (string.IsNullOrWhiteSpace(city))
+            return NotFound();
+
+        var imageUrl = await cityImageService.GetCityImageUrlAsync(city);
+        if (string.IsNullOrEmpty(imageUrl))
+            return NotFound();
+
+        var client = httpClientFactory.CreateClient();
+        client.DefaultRequestHeaders.UserAgent.ParseAdd("KioskApp/1.0");
+        var resp = await client.GetAsync(imageUrl);
+        if (!resp.IsSuccessStatusCode)
+            return NotFound();
+
+        var contentType = resp.Content.Headers.ContentType?.ToString() ?? "image/jpeg";
+        var bytes = await resp.Content.ReadAsByteArrayAsync();
+        return File(bytes, contentType);
+    }
+
+    private async Task<IActionResult> GetStaticPhoto()
+    {
+        var result = await cityImageService.GetStaticImageAsync();
+        return File(result.Data, result.ContentType);
+    }
+
+    private async Task<IActionResult> GetUploadedImage()
+    {
+        var result = await backgroundImageStore.GetLatestAsync();
+        if (result is null)
+            return NotFound();
+
+        return File(result.Value.Data, result.Value.ContentType);
     }
 }

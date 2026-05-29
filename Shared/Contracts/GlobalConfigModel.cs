@@ -4,7 +4,8 @@ public enum BackgroundStyle
 {
     Color,
     CityPhoto,
-    StaticPhoto
+    StaticPhoto,
+    UploadedImage
 }
 
 public class GlobalConfigModel

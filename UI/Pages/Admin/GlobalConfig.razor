@@ -1,5 +1,6 @@
 @page "/admin/global-config"
 @inject ApiService Api
+@inject AuthService Auth
 
 <PageTitle>Global Config</PageTitle>
 
@@ -37,24 +38,50 @@ else if (_config is not null)
                     <div class="d-flex flex-column gap-1">
                         @foreach (var style in Enum.GetValues<BackgroundStyle>())
                         {
+                            var (displayName, tooltip) = style switch
+                            {
+                                BackgroundStyle.Color => ("Solid Color", "Dark gradient background with no image"),
+                                BackgroundStyle.CityPhoto => ("City Photo", "Fetches a photo of the configured city from Wikimedia Commons"),
+                                BackgroundStyle.StaticPhoto => ("Static Photo", "Uses a random image from the server's built-in photo collection"),
+                                BackgroundStyle.UploadedImage => ("Uploaded Image", "Uses a custom image you upload (stored in cloud storage)"),
+                                _ => (style.ToString(), "")
+                            };
                             <div class="form-check">
                                 <input class="form-check-input" type="radio" id="bg-@style" name="backgroundStyle"
                                        checked="@(_config.BackgroundStyle == style)"
                                        @onchange="() => _config.BackgroundStyle = style" />
-                                <label class="form-check-label" for="bg-@style">
-                                    @(style switch
-                                    {
-                                        BackgroundStyle.Color => "Solid Color",
-                                        BackgroundStyle.CityPhoto => "City Photo",
-                                        BackgroundStyle.StaticPhoto => "Static Photo",
-                                        _ => style.ToString()
-                                    })
+                                <label class="form-check-label" for="bg-@style" title="@tooltip">
+                                    @displayName
+                                    <i class="bi bi-info-circle text-muted ms-1" title="@tooltip"></i>
                                 </label>
                             </div>
                         }
                     </div>
                 </div>
             </div>
+            @if (_config.BackgroundStyle == BackgroundStyle.UploadedImage)
+            {
+                <div class="row g-3 mt-1">
+                    <div class="col-md-6">
+                        <HxInputFile @ref="_fileInput"
+                                     Label="Upload Background Image"
+                                     UploadUrl="api/global-config/background-image"
+                                     Accept="image/jpeg,image/png,image/webp"
+                                     MaxFileSize="@(10 * 1024 * 1024)"
+                                     OnFileUploaded="OnFileUploaded"
+                                     OnUploadCompleted="OnUploadCompleted"
+                                     Hint="JPEG, PNG, or WebP — max 10 MB. Replaces any previously uploaded image." />
+                        @if (!string.IsNullOrEmpty(_uploadMessage))
+                        {
+                            <div class="mt-2 text-success"><i class="bi bi-check-circle me-1"></i>@_uploadMessage</div>
+                        }
+                        @if (!string.IsNullOrEmpty(_uploadError))
+                        {
+                            <div class="mt-2 text-danger"><i class="bi bi-exclamation-circle me-1"></i>@_uploadError</div>
+                        }
+                    </div>
+                </div>
+            }
             <div class="row g-3 mt-1">
                 <div class="col-md-4">
                     <HxInputNumber Label="Refresh Interval (seconds)" @bind-Value="_config.RefreshIntervalSeconds" Min="10" Placeholder="e.g. 60" Hint="How often the display page auto-refreshes" />
@@ -75,6 +102,9 @@ else if (_config is not null)
     private bool _saving;
     private string? _error;
     private string? _success;
+    private HxInputFile? _fileInput;
+    private string? _uploadMessage;
+    private string? _uploadError;
 
     protected override async Task OnInitializedAsync()
     {
@@ -95,8 +125,38 @@ else if (_config is not null)
         {
             await Api.SaveGlobalConfigAsync(_config!);
             _success = "Config saved successfully.";
+
+            if (_fileInput?.FileCount > 0)
+            {
+                _uploadMessage = null;
+                _uploadError = null;
+                await _fileInput.StartUploadAsync(Auth.Token);
+            }
         }
         catch { _error = "Failed to save config."; }
         finally { _saving = false; }
+    }
+
+    private Task OnFileUploaded(FileUploadedEventArgs args)
+    {
+        if (args.ResponseStatus == System.Net.HttpStatusCode.OK)
+        {
+            _uploadMessage = $"'{args.OriginalFileName}' uploaded successfully.";
+        }
+        else
+        {
+            _uploadError = $"Upload failed for '{args.OriginalFileName}' (status {args.ResponseStatus}).";
+        }
+        return Task.CompletedTask;
+    }
+
+    private async Task OnUploadCompleted(UploadCompletedEventArgs args)
+    {
+        if (_uploadError is null)
+        {
+            _success = "Config saved and image uploaded.";
+        }
+        await _fileInput!.ResetAsync();
+        StateHasChanged();
     }
 }

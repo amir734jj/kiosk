@@ -1,6 +1,7 @@
 using System.Reflection;
 using System.Text;
 using System.Threading.RateLimiting;
+using Amazon.S3;
 using Api.Data;
 using Api.Data.Entities;
 using Api.Extensions;
@@ -110,6 +111,25 @@ builder.Services.AddRazorPages();
 builder.Services.AddMemoryCache();
 builder.Services.AddHealthChecks();
 builder.Services.AddHttpClient();
+
+var spacesEndpoint = builder.Configuration["SPACES_ENDPOINT"];
+if (!string.IsNullOrEmpty(spacesEndpoint))
+{
+    builder.Services.AddSingleton<IAmazonS3>(_ => new AmazonS3Client(
+        builder.Configuration["SPACES_KEY"],
+        builder.Configuration["SPACES_SECRET"],
+        new AmazonS3Config
+        {
+            ServiceURL = spacesEndpoint,
+            ForcePathStyle = true
+        }));
+}
+else
+{
+    builder.Services.AddSingleton<IAmazonS3>(_ => new AmazonS3Client(
+        "dev", "dev",
+        new AmazonS3Config { ServiceURL = "http://localhost:4566", ForcePathStyle = true }));
+}
 
 builder.Services.AddEfRepository<AppDbContext>(x =>
 {

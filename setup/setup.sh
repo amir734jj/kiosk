@@ -97,6 +97,6 @@ echo "  Reboot to start:   sudo reboot"
 echo "  Exit kiosk:         Alt+F4 or: pkill chromium"
 echo "  Remove:             ./uninstall.sh"
 echo ""
-echo "  Page auto-refreshes every 5 minutes via meta tag"
+echo "  Page auto-refreshes based on the configured interval"
 echo ""
 exit 0

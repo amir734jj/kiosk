@@ -1,3 +1,4 @@
+using Api.Extensions;
 using Api.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -9,7 +10,7 @@ namespace Api.Controllers;
 [ApiController]
 [Route("api/global-config")]
 [Authorize(Roles = Roles.Admin)]
-public sealed class GlobalConfigController(IGlobalConfigService configService) : ControllerBase
+public sealed class GlobalConfigController(IGlobalConfigService configService, IBackgroundImageStore backgroundImageStore) : ControllerBase
 {
     [HttpGet]
     public async Task<IActionResult> GetAll()
@@ -23,5 +24,26 @@ public sealed class GlobalConfigController(IGlobalConfigService configService) :
     {
         await configService.SaveAsync(config);
         return NoContent();
+    }
+
+    [HttpPost("background-image")]
+    public async Task<IActionResult> UploadBackgroundImage(IFormFile file)
+    {
+        if (file.Length == 0)
+            return BadRequest("No file uploaded.");
+
+        if (file.Length > 10 * 1024 * 1024)
+            return BadRequest("File must be under 10 MB.");
+
+        var allowed = new[] { "image/jpeg", "image/png", "image/webp" };
+        if (!allowed.Contains(file.ContentType))
+            return BadRequest("Only JPEG, PNG, and WebP images are allowed.");
+
+        var username = User.TryGetUsername() ?? "unknown";
+
+        await using var stream = file.OpenReadStream();
+        await backgroundImageStore.UploadAsync(stream, file.ContentType, file.FileName, username);
+
+        return Ok(new { message = "Background image uploaded." });
     }
 }
