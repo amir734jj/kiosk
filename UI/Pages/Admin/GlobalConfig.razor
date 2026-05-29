@@ -71,9 +71,10 @@ else if (_config is not null)
                                  UploadUrl="/api/global-config/background-image"
                                  Accept="@ImageUpload.AcceptAttribute"
                                  MaxFileSize="@ImageUpload.MaxFileSize"
+                                 OnChange="OnFileSelected"
                                  OnFileUploaded="OnFileUploaded"
                                  OnUploadCompleted="OnUploadCompleted"
-                                 Hint="JPEG, PNG, or WebP — max 10 MB" />
+                                 Hint="JPEG, PNG, or WebP — max 10 MB. Upload starts automatically when you select a file." />
                     @if (!string.IsNullOrEmpty(_uploadMessage))
                     {
                         <div class="mt-2 text-success"><i class="bi bi-check-circle me-1"></i>@_uploadMessage</div>
@@ -149,16 +150,16 @@ else if (_config is not null)
         {
             await Api.SaveGlobalConfigAsync(_config!);
             _success = "Config saved successfully.";
-
-            if (_fileInput?.FileCount > 0)
-            {
-                _uploadMessage = null;
-                _uploadError = null;
-                await _fileInput.StartUploadAsync(Auth.Token);
-            }
         }
         catch { _error = "Failed to save config."; }
         finally { _saving = false; }
+    }
+
+    private async Task OnFileSelected(InputFileChangeEventArgs args)
+    {
+        _uploadMessage = null;
+        _uploadError = null;
+        await _fileInput!.StartUploadAsync(Auth.Token);
     }
 
     private Task OnFileUploaded(FileUploadedEventArgs args)
@@ -178,7 +179,7 @@ else if (_config is not null)
     {
         if (_uploadError is null)
         {
-            _success = "Config saved and image uploaded.";
+            _success = "Image uploaded.";
         }
         await _fileInput!.ResetAsync();
         _images = await Api.ListBackgroundImagesAsync();
