@@ -41,6 +41,7 @@ unclutter -idle 0.5 -root &
 chromium \\
     --noerrdialogs \\
     --disable-infobars \\
+    --password-store=basic \\
     --kiosk \\
     --disable-translate \\
     --disable-features=TranslateUI \\
