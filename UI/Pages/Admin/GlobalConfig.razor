@@ -59,30 +59,28 @@ else if (_config is not null)
                     </div>
                 </div>
             </div>
-            @if (_config.BackgroundStyle == BackgroundStyle.UploadedImage)
-            {
-                <div class="row g-3 mt-1">
-                    <div class="col-md-6">
-                        <HxInputFile @ref="_fileInput"
-                                     Label="Upload Background Image"
-                                     UploadUrl="api/global-config/background-image"
-                                     Accept="@ImageUpload.AcceptAttribute"
-                                     MaxFileSize="@ImageUpload.MaxFileSize"
-                                     OnFileUploaded="OnFileUploaded"
-                                     OnUploadCompleted="OnUploadCompleted"
-                                     Hint="JPEG, PNG, or WebP — max 10 MB" />
-                        @if (!string.IsNullOrEmpty(_uploadMessage))
-                        {
-                            <div class="mt-2 text-success"><i class="bi bi-check-circle me-1"></i>@_uploadMessage</div>
-                        }
-                        @if (!string.IsNullOrEmpty(_uploadError))
-                        {
-                            <div class="mt-2 text-danger"><i class="bi bi-exclamation-circle me-1"></i>@_uploadError</div>
-                        }
-                    </div>
+            <div class="row g-3 mt-1">
+                <div class="col-md-6">
+                    <HxInputFile @ref="_fileInput"
+                                 Label="Upload Background Image"
+                                 UploadUrl="api/global-config/background-image"
+                                 Accept="@ImageUpload.AcceptAttribute"
+                                 MaxFileSize="@ImageUpload.MaxFileSize"
+                                 OnFileUploaded="OnFileUploaded"
+                                 OnUploadCompleted="OnUploadCompleted"
+                                 Hint="JPEG, PNG, or WebP — max 10 MB" />
+                    @if (!string.IsNullOrEmpty(_uploadMessage))
+                    {
+                        <div class="mt-2 text-success"><i class="bi bi-check-circle me-1"></i>@_uploadMessage</div>
+                    }
+                    @if (!string.IsNullOrEmpty(_uploadError))
+                    {
+                        <div class="mt-2 text-danger"><i class="bi bi-exclamation-circle me-1"></i>@_uploadError</div>
+                    }
                 </div>
-                @if (_images.Count > 0)
-                {
+            </div>
+            @if (_images.Count > 0)
+            {
                     <div class="row g-3 mt-1">
                         <div class="col-md-8">
                             <label class="form-label">Uploaded Images</label>
@@ -105,7 +103,6 @@ else if (_config is not null)
                         </div>
                     </div>
                 }
-            }
             <div class="row g-3 mt-1">
                 <div class="col-md-4">
                     <HxInputNumber Label="Refresh Interval (seconds)" @bind-Value="_config.RefreshIntervalSeconds" Min="10" Placeholder="e.g. 60" Hint="How often the display page auto-refreshes" />
