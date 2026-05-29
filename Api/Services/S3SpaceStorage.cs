@@ -22,6 +22,7 @@ public sealed class S3SpaceStorage(IAmazonS3 s3, IMemoryCache cache, ILogger<S3S
             Key = key,
             InputStream = stream,
             ContentType = contentType,
+            DisablePayloadSigning = true,
             Metadata =
             {
                 ["x-amz-meta-original-filename"] = originalFileName,
