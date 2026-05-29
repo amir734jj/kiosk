@@ -42,7 +42,7 @@ else if (_config is not null)
                             {
                                 BackgroundStyle.Color => ("Solid Color", "Dark gradient background with no image"),
                                 BackgroundStyle.CityPhoto => ("City Photo", "Fetches a photo of the configured city from Wikimedia Commons"),
-                                BackgroundStyle.StaticPhoto => ("Static Photo", "Uses a random image from the server's built-in photo collection"),
+                                BackgroundStyle.StaticPhoto => ("Static Photo", "Uses a random image from the server's built-in photo collection (add image to the repository to have it included)"),
                                 BackgroundStyle.UploadedImage => ("Uploaded Image", "Uses a custom image you upload (stored in cloud storage)"),
                                 _ => (style.ToString(), "")
                             };
