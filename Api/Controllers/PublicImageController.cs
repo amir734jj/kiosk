@@ -8,7 +8,7 @@ namespace Api.Controllers;
 [Route("api/public")]
 public class PublicImageController(
     ICityImageService cityImageService,
-    IBackgroundImageStore backgroundImageStore,
+    ISpaceStorage backgroundImageStore,
     IGlobalConfigService configService,
     IHttpClientFactory httpClientFactory,
     ILogger<PublicImageController> logger) : ControllerBase
@@ -64,7 +64,7 @@ public class PublicImageController(
 
     private async Task<IActionResult> GetUploadedImage()
     {
-        var result = await backgroundImageStore.GetLatestAsync();
+        var result = await backgroundImageStore.GetRandomAsync();
         if (result is null)
             return NotFound();
 

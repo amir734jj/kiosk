@@ -112,23 +112,24 @@ builder.Services.AddMemoryCache();
 builder.Services.AddHealthChecks();
 builder.Services.AddHttpClient();
 
+var spacesKey = builder.Configuration["SPACES_KEY"];
+var spacesSecret = builder.Configuration["SPACES_SECRET"];
 var spacesEndpoint = builder.Configuration["SPACES_ENDPOINT"];
-if (!string.IsNullOrEmpty(spacesEndpoint))
+if (!string.IsNullOrEmpty(spacesKey) && !string.IsNullOrEmpty(spacesSecret) && !string.IsNullOrEmpty(spacesEndpoint))
 {
     builder.Services.AddSingleton<IAmazonS3>(_ => new AmazonS3Client(
-        builder.Configuration["SPACES_KEY"],
-        builder.Configuration["SPACES_SECRET"],
+        spacesKey,
+        spacesSecret,
         new AmazonS3Config
         {
             ServiceURL = spacesEndpoint,
             ForcePathStyle = true
         }));
+    builder.Services.AddSingleton<ISpaceStorage, S3SpaceStorage>();
 }
 else
 {
-    builder.Services.AddSingleton<IAmazonS3>(_ => new AmazonS3Client(
-        "dev", "dev",
-        new AmazonS3Config { ServiceURL = "http://localhost:4566", ForcePathStyle = true }));
+    builder.Services.AddSingleton<ISpaceStorage, FileSystemSpaceStorage>();
 }
 
 builder.Services.AddEfRepository<AppDbContext>(x =>

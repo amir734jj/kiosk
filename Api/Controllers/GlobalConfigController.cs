@@ -10,7 +10,7 @@ namespace Api.Controllers;
 [ApiController]
 [Route("api/global-config")]
 [Authorize(Roles = Roles.Admin)]
-public sealed class GlobalConfigController(IGlobalConfigService configService, IBackgroundImageStore backgroundImageStore) : ControllerBase
+public sealed class GlobalConfigController(IGlobalConfigService configService, ISpaceStorage backgroundImageStore) : ControllerBase
 {
     [HttpGet]
     public async Task<IActionResult> GetAll()

@@ -5,7 +5,7 @@ using Microsoft.Extensions.Caching.Memory;
 
 namespace Api.Services;
 
-public sealed class S3BackgroundImageStore(IAmazonS3 s3, IMemoryCache cache, ILogger<S3BackgroundImageStore> logger) : IBackgroundImageStore
+public sealed class S3SpaceStorage(IAmazonS3 s3, IMemoryCache cache, ILogger<S3SpaceStorage> logger) : ISpaceStorage
 {
     private const string BucketName = "kiosk";
     private const string Prefix = "backgrounds/";
@@ -34,7 +34,7 @@ public sealed class S3BackgroundImageStore(IAmazonS3 s3, IMemoryCache cache, ILo
         cache.Remove(CacheKey);
     }
 
-    public async Task<(byte[] Data, string ContentType)?> GetLatestAsync()
+    public async Task<(byte[] Data, string ContentType)?> GetRandomAsync()
     {
         if (cache.TryGetValue(CacheKey, out (byte[] Data, string ContentType) cached))
         {
@@ -56,9 +56,9 @@ public sealed class S3BackgroundImageStore(IAmazonS3 s3, IMemoryCache cache, ILo
                 return null;
             }
 
-            var latest = list.S3Objects.OrderByDescending(o => o.LastModified).First();
+            var picked = list.S3Objects[Random.Shared.Next(list.S3Objects.Count)];
 
-            var response = await s3.GetObjectAsync(BucketName, latest.Key);
+            var response = await s3.GetObjectAsync(BucketName, picked.Key);
             using var ms = new MemoryStream();
             await response.ResponseStream.CopyToAsync(ms);
 
