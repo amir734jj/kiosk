@@ -8,9 +8,20 @@ public sealed partial class NaturalSortComparer : IComparer<string?>
 
     public int Compare(string? x, string? y)
     {
-        if (x == y) return 0;
-        if (x is null) return -1;
-        if (y is null) return 1;
+        if (x == y)
+        {
+            return 0;
+        }
+
+        if (x is null)
+        {
+            return -1;
+        }
+
+        if (y is null)
+        {
+            return 1;
+        }
 
         var xParts = SplitRegex().Matches(x);
         var yParts = SplitRegex().Matches(y);
@@ -31,7 +42,10 @@ public sealed partial class NaturalSortComparer : IComparer<string?>
                 cmp = string.Compare(xVal, yVal, StringComparison.OrdinalIgnoreCase);
             }
 
-            if (cmp != 0) return cmp;
+            if (cmp != 0)
+            {
+                return cmp;
+            }
         }
 
         return xParts.Count.CompareTo(yParts.Count);

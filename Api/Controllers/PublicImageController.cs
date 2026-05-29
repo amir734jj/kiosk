@@ -39,17 +39,23 @@ public class PublicImageController(
     private async Task<IActionResult> GetCityPhoto(string? city)
     {
         if (string.IsNullOrWhiteSpace(city))
+        {
             return NotFound();
+        }
 
         var imageUrl = await cityImageService.GetCityImageUrlAsync(city);
         if (string.IsNullOrEmpty(imageUrl))
+        {
             return NotFound();
+        }
 
         var client = httpClientFactory.CreateClient();
         client.DefaultRequestHeaders.UserAgent.ParseAdd("KioskApp/1.0");
         var resp = await client.GetAsync(imageUrl);
         if (!resp.IsSuccessStatusCode)
+        {
             return NotFound();
+        }
 
         var contentType = resp.Content.Headers.ContentType?.ToString() ?? "image/jpeg";
         var bytes = await resp.Content.ReadAsByteArrayAsync();
@@ -66,7 +72,9 @@ public class PublicImageController(
     {
         var result = await backgroundImageStore.GetRandomAsync();
         if (result is null)
+        {
             return NotFound();
+        }
 
         return File(result.Value.Data, result.Value.ContentType, result.Value.OriginalFileName);
     }

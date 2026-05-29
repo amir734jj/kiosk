@@ -30,13 +30,19 @@ public sealed class GlobalConfigController(IGlobalConfigService configService, I
     public async Task<IActionResult> UploadBackgroundImage(IFormFile file)
     {
         if (file.Length == 0)
+        {
             return BadRequest("No file uploaded.");
+        }
 
         if (file.Length > ImageUpload.MaxFileSize)
+        {
             return BadRequest("File must be under 10 MB.");
+        }
 
         if (!ImageUpload.AllowedContentTypes.Contains(file.ContentType))
+        {
             return BadRequest("Only JPEG, PNG, and WebP images are allowed.");
+        }
 
         var username = User.TryGetUsername() ?? "unknown";
 

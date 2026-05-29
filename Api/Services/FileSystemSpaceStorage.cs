@@ -31,12 +31,16 @@ public sealed class FileSystemSpaceStorage(ILogger<FileSystemSpaceStorage> logge
     {
         var entries = await LoadMetadataAsync();
         if (entries.Count == 0)
+        {
             return null;
+        }
 
         var picked = entries[Random.Shared.Next(entries.Count)];
         var filePath = Path.Combine(StorageDir, picked.FileName);
         if (!File.Exists(filePath))
+        {
             return null;
+        }
 
         var data = await File.ReadAllBytesAsync(filePath);
         return (data, picked.ContentType, picked.OriginalFileName);
@@ -55,11 +59,16 @@ public sealed class FileSystemSpaceStorage(ILogger<FileSystemSpaceStorage> logge
     {
         var entries = await LoadMetadataAsync();
         var entry = entries.FirstOrDefault(e => e.Id == id);
-        if (entry is null) return;
+        if (entry is null)
+        {
+            return;
+        }
 
         var filePath = Path.Combine(StorageDir, entry.FileName);
         if (File.Exists(filePath))
+        {
             File.Delete(filePath);
+        }
 
         entries.Remove(entry);
         await SaveMetadataAsync(entries);
@@ -70,7 +79,9 @@ public sealed class FileSystemSpaceStorage(ILogger<FileSystemSpaceStorage> logge
     private static async Task<List<ImageEntry>> LoadMetadataAsync()
     {
         if (!File.Exists(MetadataFile))
+        {
             return [];
+        }
 
         var json = await File.ReadAllTextAsync(MetadataFile);
         return JsonSerializer.Deserialize<List<ImageEntry>>(json) ?? [];
