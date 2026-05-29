@@ -14,7 +14,7 @@ public class PublicImageController(
     ILogger<PublicImageController> logger) : ControllerBase
 {
     [HttpGet("background")]
-    [ResponseCache(Duration = 3600)]
+    [ResponseCache(Duration = 900)]
     public async Task<IActionResult> GetBackgroundImage()
     {
         var config = await configService.GetAsync();
