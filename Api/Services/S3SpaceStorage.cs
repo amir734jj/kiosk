@@ -52,7 +52,7 @@ public sealed class S3SpaceStorage(IAmazonS3 s3, IMemoryCache cache, ILogger<S3S
                 MaxKeys = 100
             });
 
-            if (list.S3Objects.Count == 0)
+            if (list.S3Objects is null || list.S3Objects.Count == 0)
             {
                 return null;
             }
@@ -87,7 +87,7 @@ public sealed class S3SpaceStorage(IAmazonS3 s3, IMemoryCache cache, ILogger<S3S
             });
 
             var results = new List<BackgroundImageDto>();
-            foreach (var obj in list.S3Objects.OrderByDescending(o => o.LastModified))
+            foreach (var obj in (list.S3Objects ?? []).OrderByDescending(o => o.LastModified))
             {
                 var meta = await s3.GetObjectMetadataAsync(BucketName, obj.Key);
                 var id = obj.Key[Prefix.Length..];
