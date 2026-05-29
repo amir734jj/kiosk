@@ -18,6 +18,23 @@ echo "Installing Chromium and utilities..."
 sudo apt-get update -qq
 sudo apt-get install -y -qq chromium unclutter
 
+# Force 1080p resolution (Raspberry Pi defaults to 4K on capable displays)
+BOOT_CONFIG="/boot/firmware/config.txt"
+if [ ! -f "$BOOT_CONFIG" ]; then
+    BOOT_CONFIG="/boot/config.txt"
+fi
+if [ -f "$BOOT_CONFIG" ]; then
+    echo "Setting display resolution to 1080p..."
+    sudo sed -i '/^hdmi_group=/d; /^hdmi_mode=/d; /^hdmi_force_hotplug=/d; /^framebuffer_width=/d; /^framebuffer_height=/d' "$BOOT_CONFIG"
+    sudo tee -a "$BOOT_CONFIG" > /dev/null << HDMI
+hdmi_force_hotplug=1
+hdmi_group=1
+hdmi_mode=16
+framebuffer_width=1920
+framebuffer_height=1080
+HDMI
+fi
+
 # Create kiosk directory
 sudo mkdir -p "$KIOSK_DIR"
 
