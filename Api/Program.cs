@@ -126,10 +126,12 @@ if (!string.IsNullOrEmpty(spacesKey) && !string.IsNullOrEmpty(spacesSecret) && !
             ForcePathStyle = true
         }));
     builder.Services.AddSingleton<ISpaceStorage, S3SpaceStorage>();
+    Log.Information("Using S3 storage at {Endpoint}", spacesEndpoint);
 }
 else
 {
     builder.Services.AddSingleton<ISpaceStorage, FileSystemSpaceStorage>();
+    Log.Information("Using filesystem storage (no S3 credentials configured)");
 }
 
 builder.Services.AddEfRepository<AppDbContext>(x =>
