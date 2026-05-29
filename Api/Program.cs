@@ -1,6 +1,7 @@
 using System.Reflection;
 using System.Text;
 using System.Threading.RateLimiting;
+using Amazon.Runtime;
 using Amazon.S3;
 using Api.Data;
 using Api.Data.Entities;
@@ -123,7 +124,8 @@ if (!string.IsNullOrEmpty(spacesKey) && !string.IsNullOrEmpty(spacesSecret) && !
         new AmazonS3Config
         {
             ServiceURL = spacesEndpoint,
-            ForcePathStyle = true
+            ForcePathStyle = true,
+            RequestChecksumCalculation = RequestChecksumCalculation.WHEN_REQUIRED
         }));
     builder.Services.AddSingleton<ISpaceStorage, S3SpaceStorage>();
     Log.Information("Using S3 storage at {Endpoint}", spacesEndpoint);
