@@ -28,6 +28,7 @@ Log.Logger = new LoggerConfiguration()
     .MinimumLevel.Override("Microsoft", LogEventLevel.Warning)
     .MinimumLevel.Override("System", LogEventLevel.Error)
     .MinimumLevel.Override("Microsoft.AspNetCore", LogEventLevel.Warning)
+    .MinimumLevel.Override("Api.Services.S3SpaceStorage", LogEventLevel.Debug)
     .Filter.ByExcluding(x =>
         x.Properties.TryGetValue("RequestPath", out var requestPath) &&
         requestPath.ToString().Contains("/api/health"))
@@ -118,6 +119,8 @@ var spacesSecret = builder.Configuration["SPACES_SECRET"];
 var spacesEndpoint = builder.Configuration["SPACES_ENDPOINT"];
 if (!string.IsNullOrEmpty(spacesKey) && !string.IsNullOrEmpty(spacesSecret) && !string.IsNullOrEmpty(spacesEndpoint))
 {
+    Log.Debug("S3 config — endpoint={Endpoint}, keyPrefix={KeyPrefix}..., secretLength={SecretLength}",
+        spacesEndpoint, spacesKey[..Math.Min(4, spacesKey.Length)], spacesSecret.Length);
     builder.Services.AddSingleton<IAmazonS3>(_ => new AmazonS3Client(
         spacesKey,
         spacesSecret,
@@ -133,6 +136,8 @@ if (!string.IsNullOrEmpty(spacesKey) && !string.IsNullOrEmpty(spacesSecret) && !
 }
 else
 {
+    Log.Debug("S3 config check — SPACES_KEY={HasKey}, SPACES_SECRET={HasSecret}, SPACES_ENDPOINT={HasEndpoint}",
+        !string.IsNullOrEmpty(spacesKey), !string.IsNullOrEmpty(spacesSecret), !string.IsNullOrEmpty(spacesEndpoint));
     builder.Services.AddSingleton<ISpaceStorage, FileSystemSpaceStorage>();
     Log.Information("Using filesystem storage (no S3 credentials configured)");
 }
