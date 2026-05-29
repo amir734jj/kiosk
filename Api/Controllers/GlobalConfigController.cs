@@ -46,8 +46,10 @@ public sealed class GlobalConfigController(IGlobalConfigService configService, I
 
         var username = User.TryGetUsername() ?? "unknown";
 
-        await using var stream = file.OpenReadStream();
-        await backgroundImageStore.UploadAsync(stream, file.ContentType, file.FileName, username);
+        using var ms = new MemoryStream();
+        await file.CopyToAsync(ms);
+        ms.Position = 0;
+        await backgroundImageStore.UploadAsync(ms, file.ContentType, file.FileName, username);
 
         return Ok(new { message = "Background image uploaded." });
     }
