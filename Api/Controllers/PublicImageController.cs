@@ -1,5 +1,6 @@
 using Api.Interfaces;
 using Microsoft.AspNetCore.Mvc;
+using Shared.Contracts;
 
 namespace Api.Controllers;
 
@@ -17,9 +18,9 @@ public class PublicImageController(
     {
         var config = await configService.GetAsync();
 
-        if (config.UsePublicImage)
+        if (config.BackgroundStyle == BackgroundStyle.CityPhoto)
         {
-            if (!config.ShowCityImage || string.IsNullOrWhiteSpace(config.City))
+            if (string.IsNullOrWhiteSpace(config.City))
             {
                 return NotFound();
             }
@@ -51,8 +52,12 @@ public class PublicImageController(
             }
         }
 
-        var result = await cityImageService.GetStaticImageAsync();
-            
-        return File(result.Data, result.ContentType);
+        if (config.BackgroundStyle == BackgroundStyle.StaticPhoto)
+        {
+            var result = await cityImageService.GetStaticImageAsync();
+            return File(result.Data, result.ContentType);
+        }
+
+        return NotFound();
     }
 }

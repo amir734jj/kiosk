@@ -28,7 +28,9 @@ public sealed class GlobalConfigService(IEfRepository repository, IServiceProvid
         {
             if (rows.TryGetValue(attr.Name, out var value))
             {
-                var converted = Convert.ChangeType(value, property.PropertyType);
+                object converted = property.PropertyType.IsEnum
+                    ? Enum.Parse(property.PropertyType, value)
+                    : Convert.ChangeType(value, property.PropertyType);
                 property.SetValue(model, converted);
             }
         }

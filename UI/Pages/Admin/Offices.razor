@@ -21,6 +21,7 @@
     <div class="card mb-4">
         <div class="card-body">
             <h5>@(_editId.HasValue ? "Edit" : "New") Office</h5>
+            <EditForm Model="_formModel" OnValidSubmit="SaveOffice">
             <div class="row g-3">
                 <div class="col-md-2">
                     <HxInputText Label="Unit Number" @bind-Value="_formUnit" Placeholder="e.g. 101" />
@@ -42,9 +43,10 @@
                 </div>
             </div>
             <div class="mt-3">
-                <HxButton Text="Save" Color="ThemeColor.Success" Icon="BootstrapIcon.CheckLg" OnClick="SaveOffice" CssClass="me-2" />
+                <HxSubmit Text="Save" Color="ThemeColor.Success" Icon="BootstrapIcon.CheckLg" CssClass="me-2" />
                 <HxButton Text="Cancel" Color="ThemeColor.Secondary" OnClick="CancelForm" />
             </div>
+            </EditForm>
         </div>
     </div>
 }
@@ -104,6 +106,7 @@ else
     private string? _formPhone;
     private string? _formNote;
     private string? _error;
+    private readonly object _formModel = new();
 
     protected override async Task OnInitializedAsync() => await LoadOffices();
 

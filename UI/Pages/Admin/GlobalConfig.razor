@@ -32,8 +32,27 @@ else if (_config is not null)
                 <div class="col-md-4">
                     <HxInputText Label="City" @bind-Value="_config.City" Placeholder="e.g. Milwaukee" Hint="Used for weather and background image" />
                 </div>
-                <div class="col-md-4 d-flex align-items-center pt-3">
-                    <HxSwitch Label="Show city background image" @bind-Value="_config.ShowCityImage" />
+                <div class="col-md-4">
+                    <label class="form-label">Background Style</label>
+                    <div class="d-flex flex-column gap-1">
+                        @foreach (var style in Enum.GetValues<BackgroundStyle>())
+                        {
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" id="bg-@style" name="backgroundStyle"
+                                       checked="@(_config.BackgroundStyle == style)"
+                                       @onchange="() => _config.BackgroundStyle = style" />
+                                <label class="form-check-label" for="bg-@style">
+                                    @(style switch
+                                    {
+                                        BackgroundStyle.Color => "Solid Color",
+                                        BackgroundStyle.CityPhoto => "City Photo",
+                                        BackgroundStyle.StaticPhoto => "Static Photo",
+                                        _ => style.ToString()
+                                    })
+                                </label>
+                            </div>
+                        }
+                    </div>
                 </div>
             </div>
             <div class="mt-3">

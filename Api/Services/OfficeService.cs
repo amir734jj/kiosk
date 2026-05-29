@@ -16,9 +16,9 @@ public sealed class OfficeService(IEfRepository repository) : IOfficeService
 
     public async Task<List<OfficeDto>> GetAllAsync()
     {
-        return (await Dal.GetAll(
-            orderBy: o => o.UnitNumber,
-            project: o => ToDto(o))).ToList();
+        return (await Dal.GetAll(project: o => ToDto(o)))
+            .OrderBy(o => o.UnitNumber, NaturalSortComparer.Instance)
+            .ToList();
     }
 
     public async Task<OfficeDto?> GetByIdAsync(int id)
