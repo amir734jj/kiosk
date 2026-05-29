@@ -66,11 +66,11 @@ else if (_config is not null)
                         <HxInputFile @ref="_fileInput"
                                      Label="Upload Background Image"
                                      UploadUrl="api/global-config/background-image"
-                                     Accept="image/jpeg,image/png,image/webp"
-                                     MaxFileSize="@(10 * 1024 * 1024)"
+                                     Accept="@ImageUpload.AcceptAttribute"
+                                     MaxFileSize="@ImageUpload.MaxFileSize"
                                      OnFileUploaded="OnFileUploaded"
                                      OnUploadCompleted="OnUploadCompleted"
-                                     Hint="JPEG, PNG, or WebP — max 10 MB. Replaces any previously uploaded image." />
+                                     Hint="JPEG, PNG, or WebP — max 10 MB" />
                         @if (!string.IsNullOrEmpty(_uploadMessage))
                         {
                             <div class="mt-2 text-success"><i class="bi bi-check-circle me-1"></i>@_uploadMessage</div>
@@ -81,6 +81,30 @@ else if (_config is not null)
                         }
                     </div>
                 </div>
+                @if (_images.Count > 0)
+                {
+                    <div class="row g-3 mt-1">
+                        <div class="col-md-8">
+                            <label class="form-label">Uploaded Images</label>
+                            <ul class="list-group">
+                                @foreach (var img in _images)
+                                {
+                                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <strong>@img.OriginalFileName</strong>
+                                            <small class="text-muted ms-2">@img.ContentType</small>
+                                            <small class="text-muted ms-2">by @img.UploadedBy</small>
+                                            <small class="text-muted ms-2">@img.UploadedAt.ToString("g")</small>
+                                        </div>
+                                        <button class="btn btn-sm btn-outline-danger" @onclick="() => DeleteImage(img.Id)" disabled="@_deleting">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </li>
+                                }
+                            </ul>
+                        </div>
+                    </div>
+                }
             }
             <div class="row g-3 mt-1">
                 <div class="col-md-4">
@@ -105,12 +129,15 @@ else if (_config is not null)
     private HxInputFile? _fileInput;
     private string? _uploadMessage;
     private string? _uploadError;
+    private List<BackgroundImageDto> _images = [];
+    private bool _deleting;
 
     protected override async Task OnInitializedAsync()
     {
         try
         {
             _config = await Api.GetGlobalConfigAsync();
+            _images = await Api.ListBackgroundImagesAsync();
         }
         catch { _error = "Failed to load config."; }
         finally { _loading = false; }
@@ -157,6 +184,20 @@ else if (_config is not null)
             _success = "Config saved and image uploaded.";
         }
         await _fileInput!.ResetAsync();
+        _images = await Api.ListBackgroundImagesAsync();
         StateHasChanged();
+    }
+
+    private async Task DeleteImage(string id)
+    {
+        _deleting = true;
+        try
+        {
+            await Api.DeleteBackgroundImageAsync(id);
+            _images = await Api.ListBackgroundImagesAsync();
+            _success = "Image deleted.";
+        }
+        catch { _error = "Failed to delete image."; }
+        finally { _deleting = false; }
     }
 }

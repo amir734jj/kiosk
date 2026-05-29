@@ -32,11 +32,10 @@ public sealed class GlobalConfigController(IGlobalConfigService configService, I
         if (file.Length == 0)
             return BadRequest("No file uploaded.");
 
-        if (file.Length > 10 * 1024 * 1024)
+        if (file.Length > ImageUpload.MaxFileSize)
             return BadRequest("File must be under 10 MB.");
 
-        var allowed = new[] { "image/jpeg", "image/png", "image/webp" };
-        if (!allowed.Contains(file.ContentType))
+        if (!ImageUpload.AllowedContentTypes.Contains(file.ContentType))
             return BadRequest("Only JPEG, PNG, and WebP images are allowed.");
 
         var username = User.TryGetUsername() ?? "unknown";
@@ -45,5 +44,19 @@ public sealed class GlobalConfigController(IGlobalConfigService configService, I
         await backgroundImageStore.UploadAsync(stream, file.ContentType, file.FileName, username);
 
         return Ok(new { message = "Background image uploaded." });
+    }
+
+    [HttpGet("background-images")]
+    public async Task<IActionResult> ListBackgroundImages()
+    {
+        var images = await backgroundImageStore.ListAsync();
+        return Ok(images);
+    }
+
+    [HttpDelete("background-image/{id}")]
+    public async Task<IActionResult> DeleteBackgroundImage(string id)
+    {
+        await backgroundImageStore.DeleteAsync(id);
+        return NoContent();
     }
 }

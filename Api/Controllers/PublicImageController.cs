@@ -68,6 +68,6 @@ public class PublicImageController(
         if (result is null)
             return NotFound();
 
-        return File(result.Value.Data, result.Value.ContentType);
+        return File(result.Value.Data, result.Value.ContentType, result.Value.OriginalFileName);
     }
 }

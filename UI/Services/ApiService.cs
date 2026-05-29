@@ -134,4 +134,6 @@ public sealed class ApiService(
     // --- Global Config ---
     public Task<GlobalConfigModel> GetGlobalConfigAsync() => globalConfigApi.GetAsync();
     public Task SaveGlobalConfigAsync(GlobalConfigModel config) => globalConfigApi.SaveAsync(config);
+    public Task<List<BackgroundImageDto>> ListBackgroundImagesAsync() => globalConfigApi.ListBackgroundImagesAsync();
+    public Task DeleteBackgroundImageAsync(string id) => globalConfigApi.DeleteBackgroundImageAsync(id);
 }

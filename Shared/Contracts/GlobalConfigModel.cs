@@ -1,5 +1,12 @@
 namespace Shared.Contracts;
 
+public static class ImageUpload
+{
+    public static readonly string[] AllowedContentTypes = ["image/jpeg", "image/png", "image/webp"];
+    public const string AcceptAttribute = "image/jpeg,image/png,image/webp";
+    public const int MaxFileSize = 10 * 1024 * 1024;
+}
+
 public enum BackgroundStyle
 {
     Color,
