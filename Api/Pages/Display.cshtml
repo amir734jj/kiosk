@@ -16,7 +16,7 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta http-equiv="refresh" content="60" />
+    <meta http-equiv="refresh" content="@(data?.RefreshIntervalSeconds ?? 60)" />
     <title>Office Directory</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet" />
@@ -113,7 +113,9 @@
             {
                 parts.Add(data.KioskName);
             }
-            parts.Add("Auto-refreshes every 5 minutes");
+            var interval = data?.RefreshIntervalSeconds ?? 60;
+            var refreshText = interval >= 60 ? $"Auto-refreshes every {interval / 60} min" : $"Auto-refreshes every {interval}s";
+            parts.Add(refreshText);
         }
         <span>@string.Join(" • ", parts)</span>
         <span> • Last updated: @now.ToString("h:mm:ss tt")</span>

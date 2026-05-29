@@ -17,4 +17,7 @@ public class GlobalConfigModel
 
     [GlobalConfigCol(Name = "KIOSK_NAME")]
     public string KioskName { get; set; } = string.Empty;
+
+    [GlobalConfigCol(Name = "REFRESH_INTERVAL_SECONDS")]
+    public int RefreshIntervalSeconds { get; set; } = 60;
 }

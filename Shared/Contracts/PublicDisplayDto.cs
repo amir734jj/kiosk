@@ -7,4 +7,5 @@ public record PublicDisplayDto(
     bool HasBackgroundImage,
     string? TodayHoliday,
     string? KioskName,
+    int RefreshIntervalSeconds,
     DateTimeOffset GeneratedAt);
