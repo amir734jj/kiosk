@@ -7,6 +7,10 @@
 
 <h2 class="mb-3"><i class="bi bi-gear me-2"></i>Global Config</h2>
 
+@if (_config?.BackgroundStyle == BackgroundStyle.UploadedImage && _images.Count == 0)
+{
+    <HxAlert Color="ThemeColor.Warning"><i class="bi bi-exclamation-triangle me-1"></i>You selected "Uploaded Image" but no images have been uploaded yet. Upload at least one image below.</HxAlert>
+}
 @if (!string.IsNullOrEmpty(_error))
 {
     <HxAlert Color="ThemeColor.Danger">@_error</HxAlert>
