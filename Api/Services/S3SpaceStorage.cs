@@ -117,6 +117,37 @@ public sealed class S3SpaceStorage(IAmazonS3 s3, IMemoryCache cache, ILogger<S3S
         }
     }
 
+    public async Task<(byte[] Data, string ContentType, string OriginalFileName)?> GetByIdAsync(string id)
+    {
+        var key = $"{Prefix}{id}";
+        logger.LogDebug("S3 GetByIdAsync starting — bucket={Bucket}, key={Key}", BucketName, key);
+
+        try
+        {
+            var response = await s3.GetObjectAsync(BucketName, key);
+            using var ms = new MemoryStream();
+            await response.ResponseStream.CopyToAsync(ms);
+
+            var originalFileName = response.Metadata["x-amz-meta-original-filename"] ?? id;
+            var contentType = response.Headers.ContentType ?? "image/jpeg";
+
+            logger.LogDebug("S3 GetByIdAsync — file={File}, contentType={ContentType}, size={Size} bytes",
+                originalFileName, contentType, ms.Length);
+
+            return (ms.ToArray(), contentType, originalFileName);
+        }
+        catch (AmazonS3Exception ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
+        {
+            logger.LogDebug("S3 GetByIdAsync — key={Key} not found", key);
+            return null;
+        }
+        catch (AmazonS3Exception ex)
+        {
+            logger.LogWarning(ex, "S3 GetByIdAsync FAILED — key={Key}, errorCode={ErrorCode}", key, ex.ErrorCode);
+            return null;
+        }
+    }
+
     public async Task<List<BackgroundImageDto>> ListAsync()
     {
         logger.LogDebug("S3 ListAsync starting — bucket={Bucket}, prefix={Prefix}", BucketName, Prefix);

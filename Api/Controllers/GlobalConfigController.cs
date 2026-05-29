@@ -61,6 +61,19 @@ public sealed class GlobalConfigController(IGlobalConfigService configService, I
         return Ok(images);
     }
 
+    [HttpGet("background-image/{id}")]
+    public async Task<IActionResult> DownloadBackgroundImage(string id)
+    {
+        var result = await backgroundImageStore.GetByIdAsync(id);
+        if (result is null)
+        {
+            return NotFound();
+        }
+
+        var (data, contentType, originalFileName) = result.Value;
+        return File(data, contentType, originalFileName);
+    }
+
     [HttpDelete("background-image/{id}")]
     public async Task<IActionResult> DeleteBackgroundImage(string id)
     {

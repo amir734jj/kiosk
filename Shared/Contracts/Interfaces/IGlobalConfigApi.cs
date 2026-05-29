@@ -11,6 +11,10 @@ public interface IGlobalConfigApi
     [Put("/api/global-config")]
     Task SaveAsync([Body] GlobalConfigModel config);
 
+    [Multipart]
+    [Post("/api/global-config/background-image")]
+    Task UploadBackgroundImageAsync([AliasAs("file")] StreamPart file);
+
     [Get("/api/global-config/background-images")]
     Task<List<BackgroundImageDto>> ListBackgroundImagesAsync();
 

@@ -1,6 +1,8 @@
 @page "/admin/global-config"
 @inject ApiService Api
 @inject AuthService Auth
+@using Refit
+@inject IJSRuntime Js
 
 <PageTitle>Global Config</PageTitle>
 
@@ -66,15 +68,15 @@ else if (_config is not null)
             </div>
             <div class="row g-3 mt-1">
                 <div class="col-md-6">
-                    <HxInputFile @ref="_fileInput"
-                                 Label="Upload Background Image"
-                                 UploadUrl="/api/global-config/background-image"
+                    <HxInputFile Label="Upload Background Image"
                                  Accept="@ImageUpload.AcceptAttribute"
                                  MaxFileSize="@ImageUpload.MaxFileSize"
                                  OnChange="OnFileSelected"
-                                 OnFileUploaded="OnFileUploaded"
-                                 OnUploadCompleted="OnUploadCompleted"
-                                 Hint="JPEG, PNG, or WebP — max 10 MB. Upload starts automatically when you select a file." />
+                                 Hint="JPEG, PNG, or WebP — max 10 MB." />
+                    @if (_uploading)
+                    {
+                        <div class="mt-2"><HxSpinner Size="SpinnerSize.Small" CssClass="me-1" /> Uploading…</div>
+                    }
                     @if (!string.IsNullOrEmpty(_uploadMessage))
                     {
                         <div class="mt-2 text-success"><i class="bi bi-check-circle me-1"></i>@_uploadMessage</div>
@@ -95,7 +97,9 @@ else if (_config is not null)
                                 {
                                     <li class="list-group-item d-flex justify-content-between align-items-center">
                                         <div>
-                                            <strong>@img.OriginalFileName</strong>
+                                            <a href="#" @onclick="() => DownloadImage(img)" @onclick:preventDefault class="fw-bold text-decoration-none">
+                                                <i class="bi bi-download me-1"></i>@img.OriginalFileName
+                                            </a>
                                             <small class="text-muted ms-2">@img.ContentType</small>
                                             <small class="text-muted ms-2">by @img.UploadedBy</small>
                                             <small class="text-muted ms-2">@img.UploadedAt.ToString("g")</small>
@@ -124,9 +128,9 @@ else if (_config is not null)
     private bool _saving;
     private string? _error;
     private string? _success;
-    private HxInputFile? _fileInput;
     private string? _uploadMessage;
     private string? _uploadError;
+    private bool _uploading;
     private List<BackgroundImageDto> _images = [];
     private bool _deleting;
 
@@ -159,31 +163,27 @@ else if (_config is not null)
     {
         _uploadMessage = null;
         _uploadError = null;
-        await _fileInput!.StartUploadAsync(Auth.Token);
-    }
-
-    private Task OnFileUploaded(FileUploadedEventArgs args)
-    {
-        if (args.ResponseStatus == System.Net.HttpStatusCode.OK)
-        {
-            _uploadMessage = $"'{args.OriginalFileName}' uploaded successfully.";
-        }
-        else
-        {
-            _uploadError = $"Upload failed for '{args.OriginalFileName}' (status {args.ResponseStatus}).";
-        }
-        return Task.CompletedTask;
-    }
-
-    private async Task OnUploadCompleted(UploadCompletedEventArgs args)
-    {
-        if (_uploadError is null)
-        {
-            _success = "Image uploaded.";
-        }
-        await _fileInput!.ResetAsync();
-        _images = await Api.ListBackgroundImagesAsync();
+        _uploading = true;
         StateHasChanged();
+
+        try
+        {
+            var file = args.File;
+            using var stream = file.OpenReadStream(maxAllowedSize: ImageUpload.MaxFileSize);
+            var part = new StreamPart(stream, file.Name, file.ContentType);
+            await Api.UploadBackgroundImageAsync(part);
+
+            _uploadMessage = $"'{file.Name}' uploaded successfully.";
+            _images = await Api.ListBackgroundImagesAsync();
+        }
+        catch (Exception ex)
+        {
+            _uploadError = $"Upload failed: {ex.Message}";
+        }
+        finally
+        {
+            _uploading = false;
+        }
     }
 
     private async Task DeleteImage(string id)
@@ -197,5 +197,15 @@ else if (_config is not null)
         }
         catch { _error = "Failed to delete image."; }
         finally { _deleting = false; }
+    }
+
+    private async Task DownloadImage(BackgroundImageDto img)
+    {
+        try
+        {
+            var url = $"api/global-config/background-image/{img.Id}";
+            await Js.InvokeVoidAsync("downloadFileFromUrl", url, img.OriginalFileName, Auth.Token);
+        }
+        catch { _error = "Failed to download image."; }
     }
 }

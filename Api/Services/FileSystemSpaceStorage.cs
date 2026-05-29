@@ -46,6 +46,25 @@ public sealed class FileSystemSpaceStorage(ILogger<FileSystemSpaceStorage> logge
         return (data, picked.ContentType, picked.OriginalFileName);
     }
 
+    public async Task<(byte[] Data, string ContentType, string OriginalFileName)?> GetByIdAsync(string id)
+    {
+        var entries = await LoadMetadataAsync();
+        var entry = entries.FirstOrDefault(e => e.Id == id);
+        if (entry is null)
+        {
+            return null;
+        }
+
+        var filePath = Path.Combine(StorageDir, entry.FileName);
+        if (!File.Exists(filePath))
+        {
+            return null;
+        }
+
+        var data = await File.ReadAllBytesAsync(filePath);
+        return (data, entry.ContentType, entry.OriginalFileName);
+    }
+
     public async Task<List<BackgroundImageDto>> ListAsync()
     {
         var entries = await LoadMetadataAsync();

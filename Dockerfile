@@ -19,6 +19,6 @@ ENV ASPNETCORE_ENVIRONMENT=Production
 ENV TZ=America/Chicago
 
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends tzdata
+    apt-get install -y --no-install-recommends tzdata libkrb5-3
 
 ENTRYPOINT ["dotnet", "Api.dll"]
