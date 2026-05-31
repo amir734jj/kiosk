@@ -113,7 +113,7 @@ else
         _formTitle = a.Title;
         _formContent = a.Content;
         _formIsActive = a.IsActive.ToString().ToLower();
-        _formExpires = a.ExpiresAt?.LocalDateTime;
+        _formExpires = a.ExpiresAt?.UtcDateTime;
         _showForm = true;
     }
 

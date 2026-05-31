@@ -2,6 +2,7 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using Api.Data;
 using Api.Data.Entities;
+using Api.Extensions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -57,6 +58,8 @@ public class UsersController(UserManager<AppUser> users) : ControllerBase
     [HttpPost("{id:int}/deactivate")]
     public async Task<IActionResult> Deactivate(int id)
     {
+        if (id == User.GetUserId()) return BadRequest("Cannot deactivate yourself.");
+
         var user = await users.FindByIdAsync(id.ToString());
         if (user is null)
         {
@@ -71,6 +74,8 @@ public class UsersController(UserManager<AppUser> users) : ControllerBase
     [HttpDelete("{id:int}")]
     public async Task<IActionResult> Delete(int id)
     {
+        if (id == User.GetUserId()) return BadRequest("Cannot delete yourself.");
+
         var user = await users.FindByIdAsync(id.ToString());
         if (user is null)
         {

@@ -115,9 +115,10 @@ public class CityImageService(IHttpClientFactory httpClientFactory, IMemoryCache
     {
         var file = Directory.GetFiles("Images").Shuffle().Take(1).First();
         
-        var extension = Path.GetExtension(file);
+        var extension = Path.GetExtension(file).TrimStart('.').ToLowerInvariant();
+        var contentType = extension == "jpg" ? "image/jpeg" : $"image/{extension}";
         var imageBytes = await File.ReadAllBytesAsync(file);
             
-        return (Data: imageBytes, ContentType: $"image/{extension}");
+        return (Data: imageBytes, ContentType: contentType);
     }
 }

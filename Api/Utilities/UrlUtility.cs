@@ -17,8 +17,8 @@ public static class UrlUtility
         {
             ["Port"] = url!.Port.ToString(),
             ["Host"] = url.Host,
-            ["Username"] = url.UserInfo!.Split(':').GetValue(0)?.ToString()!,
-            ["Password"] = url.UserInfo.Split(':').GetValue(1)?.ToString()!,
+            ["Username"] = url!.UserInfo!.Split(':', 2).GetValue(0)?.ToString()!,
+            ["Password"] = url.UserInfo.Split(':', 2).GetValue(1)?.ToString()!,
             ["Database"] = url.LocalPath[1..],
             ["ApplicationName"] = "kiosk"
         };

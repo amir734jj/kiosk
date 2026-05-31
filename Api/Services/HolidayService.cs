@@ -27,11 +27,11 @@ public class HolidayService(IHttpClientFactory httpClientFactory, IMemoryCache c
                 return null;
             }
 
-            var json = JObject.Parse(await resp.Content.ReadAsStringAsync());
+            var arr = JArray.Parse(await resp.Content.ReadAsStringAsync());
 
-            if (json["is_public_holiday"]?.Value<bool>() == true)
+            if (arr.Count > 0)
             {
-                var name = json["public_holiday_name"]?.ToString();
+                var name = arr[0]["name"]?.ToString();
                 cache.Set(cacheKey, name, TimeSpan.FromHours(6));
                 return name;
             }
