@@ -8,5 +8,5 @@ public record OfficeRequest(
     List<string>? Names,
     string? PhoneNumber,
     string? Note,
-    [Range(1, int.MaxValue, ErrorMessage = "Floor must be 1 or greater.")]
+    [Range(0, int.MaxValue, ErrorMessage = "Floor must be 0 or greater.")]
     int? Floor);
