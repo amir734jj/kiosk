@@ -27,6 +27,43 @@
         .office-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 1rem; align-content: start; }
         .unit-badge { background: #e94560; font-size: 1.5rem; font-weight: bold; padding: 0.2rem 0.8rem; border-radius: 8px; }
 
+        /* Announcement ticker */
+        .ticker {
+            background: var(--bs-dark);
+            border-top: 2px solid rgba(255, 193, 7, 0.4);
+            padding: 0.5rem 0;
+            overflow: hidden;
+            white-space: nowrap;
+            display: flex;
+            align-items: center;
+        }
+        .ticker-label {
+            background: #ffc107;
+            color: #1a1a1a;
+            font-size: 0.85rem;
+            font-weight: 700;
+            padding: 0.25rem 0.75rem;
+            margin: 0 1rem 0 0.75rem;
+            flex-shrink: 0;
+            border-radius: 4px;
+            letter-spacing: 0.04em;
+        }
+        .ticker-track {
+            display: inline-block;
+            white-space: nowrap;
+            animation: ticker-scroll var(--ticker-duration, 30s) linear infinite;
+        }
+        .ticker-item {
+            color: #ffc107;
+            font-size: 1.1rem;
+            margin-right: 4rem;
+        }
+        .ticker-item strong { color: #fff; }
+        @@keyframes ticker-scroll {
+            0%   { transform: translateX(0); }
+            100% { transform: translateX(-50%); }
+        }
+
         /* Scale UI based on viewport — baseline 1920px (1080p) = zoom 1 */
         @@media (min-width: 2200px) { body { zoom: 1.15; } }
         @@media (min-width: 2560px) { body { zoom: 1.33; } }
@@ -60,18 +97,6 @@
             </div>
         </div>
     </nav>
-
-    @* ── Announcements ── *@
-    @if (data?.Announcements.Count > 0)
-    {
-        <div class="kiosk-announce border-bottom border-warning-subtle d-flex align-items-center gap-3 px-4 py-2">
-            <span class="badge bg-warning text-dark fs-6"><i class="bi bi-megaphone-fill me-1"></i>Announcements</span>
-            @foreach (var a in data.Announcements)
-            {
-                <span class="text-warning"><strong>@a.Title</strong> &mdash; @a.Content</span>
-            }
-        </div>
-    }
 
     @* ── Office Cards ── *@
     @if (data?.Offices.Count > 0)
@@ -111,8 +136,28 @@
         </div>
     }
 
+    @* ── Announcement Ticker ── *@
+    @if (data?.Announcements.Count > 0)
+    {
+        <div class="ticker mt-auto">
+            <span class="ticker-label"><i class="bi bi-megaphone-fill me-1"></i>ANNOUNCEMENTS</span>
+            <div style="overflow:hidden;flex:1;">
+                <div class="ticker-track" id="tickerTrack">
+                    @* Items are duplicated so the scroll loops seamlessly *@
+                    @for (var i = 0; i < 2; i++)
+                    {
+                        @foreach (var a in data.Announcements)
+                        {
+                            <span class="ticker-item"><strong>@a.Title</strong> &mdash; @a.Content</span>
+                        }
+                    }
+                </div>
+            </div>
+        </div>
+    }
+
     @* ── Footer ── *@
-    <footer class="text-center text-white-50 small py-2 mt-auto">
+    <footer class="text-center text-white-50 small py-2">
         @{
             var parts = new List<string>();
             if (!string.IsNullOrEmpty(data?.KioskName))
@@ -132,5 +177,17 @@
         <span> • Last updated: @now.ToString("h:mm:ss tt")</span>
     </footer>
 
+<script>
+    // Adjust ticker speed based on content width (~80px/s)
+    (function () {
+        var track = document.getElementById('tickerTrack');
+        if (track) {
+            var width = track.scrollWidth / 2;
+            var duration = Math.max(15, width / 80);
+            track.style.setProperty('--ticker-duration', duration + 's');
+            track.style.animationDuration = duration + 's';
+        }
+    })();
+</script>
 </body>
 </html>
