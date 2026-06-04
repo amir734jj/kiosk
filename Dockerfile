@@ -1,5 +1,6 @@
 FROM mcr.microsoft.com/dotnet/sdk:10.0-alpine AS build
 ARG BUILD_CONFIGURATION=Release
+ENV DOTNET_NUGET_SIGNATURE_VERIFICATION=false
 
 WORKDIR /src
 COPY . .
