@@ -230,15 +230,7 @@
         var AD_INTERVAL = @(data?.AdIntervalSeconds ?? 300) * 1000;
         var AD_DURATION = @(data?.AdDurationSeconds ?? 10) * 1000;
         var STORAGE_KEY = 'kiosk_ad_last_shown';
-        var INDEX_KEY = 'kiosk_ad_index';
         var ads = null;
-
-        function getAdIndex() {
-            return parseInt(localStorage.getItem(INDEX_KEY) || '0', 10);
-        }
-        function setAdIndex(i) {
-            localStorage.setItem(INDEX_KEY, i.toString());
-        }
 
         function fetchAds() {
             return fetch('/api/public/ads/active')
@@ -297,12 +289,18 @@
             var elapsed = Date.now() - lastShown;
 
             if (elapsed >= AD_INTERVAL) {
-                // Time to show an ad
-                var idx = getAdIndex();
-                var ad = ads[idx % ads.length];
-                setAdIndex(idx + 1);
-                // Small delay so page renders first
-                setTimeout(function () { showAd(ad); }, 1000);
+                // Time to show ads — cycle through all of them
+                localStorage.setItem(STORAGE_KEY, Date.now().toString());
+                var i = 0;
+                function showNext() {
+                    if (i >= ads.length) return;
+                    showAd(ads[i]);
+                    i++;
+                    if (i < ads.length) {
+                        setTimeout(showNext, AD_DURATION + 600);
+                    }
+                }
+                setTimeout(showNext, 1000);
             }
         });
     })();
