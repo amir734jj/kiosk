@@ -8,4 +8,6 @@ public record PublicDisplayDto(
     string? TodayHoliday,
     string? KioskName,
     int RefreshIntervalSeconds,
+    int AdIntervalSeconds,
+    int AdDurationSeconds,
     DateTimeOffset GeneratedAt);

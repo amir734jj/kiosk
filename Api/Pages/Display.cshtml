@@ -224,8 +224,8 @@
 
     // Advertisement rotation — show an ad every 5 minutes for 10 seconds
     (function () {
-        var AD_INTERVAL = 5 * 60 * 1000; // 5 minutes
-        var AD_DURATION = 10 * 1000;      // 10 seconds
+        var AD_INTERVAL = @(data?.AdIntervalSeconds ?? 300) * 1000;
+        var AD_DURATION = @(data?.AdDurationSeconds ?? 10) * 1000;
         var adIndex = 0;
         var ads = null;
 

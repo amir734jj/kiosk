@@ -28,4 +28,10 @@ public class GlobalConfigModel
 
     [GlobalConfigCol(Name = "REFRESH_INTERVAL_SECONDS")]
     public int RefreshIntervalSeconds { get; set; } = 60;
+
+    [GlobalConfigCol(Name = "AD_INTERVAL_SECONDS")]
+    public int AdIntervalSeconds { get; set; } = 300;
+
+    [GlobalConfigCol(Name = "AD_DURATION_SECONDS")]
+    public int AdDurationSeconds { get; set; } = 10;
 }

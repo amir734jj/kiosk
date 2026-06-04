@@ -68,6 +68,12 @@ else if (_config is not null)
                 <div class="col-md-4">
                     <HxInputNumber Label="Refresh Interval (seconds)" @bind-Value="_config.RefreshIntervalSeconds" Min="10" Placeholder="e.g. 60" Hint="How often the display page auto-refreshes" />
                 </div>
+                <div class="col-md-4">
+                    <HxInputNumber Label="Ad Interval (seconds)" @bind-Value="_config.AdIntervalSeconds" Min="30" Placeholder="e.g. 300" Hint="How often an advertisement is shown (default 5 min)" />
+                </div>
+                <div class="col-md-4">
+                    <HxInputNumber Label="Ad Duration (seconds)" @bind-Value="_config.AdDurationSeconds" Min="3" Placeholder="e.g. 10" Hint="How long each advertisement is displayed" />
+                </div>
             </div>
             <div class="row g-3 mt-1">
                 <div class="col-md-6">

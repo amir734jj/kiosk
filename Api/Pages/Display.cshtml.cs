@@ -29,6 +29,6 @@ public class DisplayModel(IOfficeService officeService, IAnnouncementService ann
             .Select(o => new PublicOfficeDto(o.UnitNumber, o.Name, o.Names, o.PhoneNumber, o.Note, o.Floor))
             .ToList();
 
-        Data = new PublicDisplayDto(publicOffices, announcements, weather, config.BackgroundStyle != BackgroundStyle.Color, todayHoliday, kioskName, config.RefreshIntervalSeconds, DateTimeOffset.UtcNow);
+        Data = new PublicDisplayDto(publicOffices, announcements, weather, config.BackgroundStyle != BackgroundStyle.Color, todayHoliday, kioskName, config.RefreshIntervalSeconds, config.AdIntervalSeconds, config.AdDurationSeconds, DateTimeOffset.UtcNow);
     }
 }
