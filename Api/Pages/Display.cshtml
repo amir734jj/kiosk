@@ -16,7 +16,6 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta http-equiv="refresh" content="@(data?.RefreshIntervalSeconds ?? 60)" />
     <title>Office Directory</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet" />
@@ -225,20 +224,25 @@
         }
     })();
 
-    // Advertisement rotation — show an ad every AD_INTERVAL, surviving page refreshes
+    // Page refresh + advertisement rotation — coordinated via JS timers
+    // so the page never reloads while ads are showing and ad timing is accurate.
     (function () {
+        var REFRESH_INTERVAL = @(data?.RefreshIntervalSeconds ?? 60) * 1000;
         var AD_INTERVAL = @(data?.AdIntervalSeconds ?? 300) * 1000;
         var AD_DURATION = @(data?.AdDurationSeconds ?? 10) * 1000;
-        var STORAGE_KEY = 'kiosk_ad_last_shown';
-        var ads = null;
+        var STORAGE_TIME_KEY = 'kiosk_ad_last_shown';
+        var STORAGE_INDEX_KEY = 'kiosk_ad_last_index';
+        var refreshTimer = null;
 
-        function fetchAds() {
-            return fetch('/api/public/ads/active')
-                .then(function (r) { return r.ok ? r.json() : []; })
-                .catch(function () { return []; });
+        function scheduleRefresh() {
+            refreshTimer = setTimeout(function () { location.reload(); }, REFRESH_INTERVAL);
         }
 
-        function showAd(ad) {
+        function cancelRefresh() {
+            if (refreshTimer) { clearTimeout(refreshTimer); refreshTimer = null; }
+        }
+
+        function showAd(ad, onDone) {
             var overlay = document.getElementById('adOverlay');
             var title = document.getElementById('adTitle');
             var desc = document.getElementById('adDescription');
@@ -270,39 +274,56 @@
                 });
             });
 
-            // Hide after duration
+            // Hide after duration, then callback
             setTimeout(function () {
                 overlay.classList.remove('visible');
                 setTimeout(function () {
                     overlay.classList.remove('active');
+                    if (onDone) onDone();
                 }, 500);
             }, AD_DURATION);
-
-            localStorage.setItem(STORAGE_KEY, Date.now().toString());
         }
 
-        fetchAds().then(function (data) {
-            ads = data;
-            if (!ads || ads.length === 0) return;
+        function showNextAd(ads) {
+            cancelRefresh();
 
-            var lastShown = parseInt(localStorage.getItem(STORAGE_KEY) || '0', 10);
-            var elapsed = Date.now() - lastShown;
+            // Pick next ad in rotation (round-robin via localStorage)
+            var lastIndex = parseInt(localStorage.getItem(STORAGE_INDEX_KEY) || '-1', 10);
+            var nextIndex = (lastIndex + 1) % ads.length;
 
-            if (elapsed >= AD_INTERVAL) {
-                // Time to show ads — cycle through all of them
-                localStorage.setItem(STORAGE_KEY, Date.now().toString());
-                var i = 0;
-                function showNext() {
-                    if (i >= ads.length) return;
-                    showAd(ads[i]);
-                    i++;
-                    if (i < ads.length) {
-                        setTimeout(showNext, AD_DURATION + 600);
-                    }
+            localStorage.setItem(STORAGE_TIME_KEY, Date.now().toString());
+            localStorage.setItem(STORAGE_INDEX_KEY, nextIndex.toString());
+
+            showAd(ads[nextIndex], function () {
+                // Ad done — restart refresh timer
+                scheduleRefresh();
+            });
+        }
+
+        // Start page-refresh timer
+        scheduleRefresh();
+
+        // Fetch ads and schedule based on timing
+        fetch('/api/public/ads/active')
+            .then(function (r) { return r.ok ? r.json() : []; })
+            .catch(function () { return []; })
+            .then(function (ads) {
+                if (!ads || ads.length === 0) return;
+
+                var lastShown = parseInt(localStorage.getItem(STORAGE_TIME_KEY) || '0', 10);
+                var elapsed = Date.now() - lastShown;
+                var timeUntilNextAd = Math.max(0, AD_INTERVAL - elapsed);
+
+                if (timeUntilNextAd === 0) {
+                    // Ad due now — show after a brief render delay
+                    setTimeout(function () { showNextAd(ads); }, 1000);
+                } else if (timeUntilNextAd < REFRESH_INTERVAL) {
+                    // Ad due before next refresh — cancel refresh, schedule ad
+                    cancelRefresh();
+                    setTimeout(function () { showNextAd(ads); }, timeUntilNextAd);
                 }
-                setTimeout(showNext, 1000);
-            }
-        });
+                // Otherwise the page refreshes first; next load recalculates
+            });
     })();
 </script>
 </body>

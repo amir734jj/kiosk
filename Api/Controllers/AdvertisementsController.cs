@@ -88,7 +88,7 @@ public class AdvertisementsController(IAdvertisementService advertisementService
         return Ok(photos);
     }
 
-    [HttpDelete("{id:int}/photos/{photoId}")]
+    [HttpDelete("{id:int}/photos/{photoId:guid}")]
     public async Task<IActionResult> DeletePhoto(int id, string photoId)
     {
         var deleted = await advertisementService.DeletePhotoAsync(id, photoId);

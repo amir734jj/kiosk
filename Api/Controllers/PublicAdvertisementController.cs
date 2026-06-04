@@ -14,7 +14,7 @@ public class PublicAdvertisementController(IAdvertisementService advertisementSe
         return Ok(ads);
     }
 
-    [HttpGet("{adId:int}/photos/{photoId}")]
+    [HttpGet("{adId:int}/photos/{photoId:guid}")]
     [ResponseCache(Duration = 3600)]
     public async Task<IActionResult> GetPhoto(int adId, string photoId)
     {
