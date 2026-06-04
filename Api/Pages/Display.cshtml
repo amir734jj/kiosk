@@ -222,26 +222,28 @@
         }
     })();
 
-    // Advertisement rotation — show an ad every 5 minutes for 10 seconds
+    // Advertisement rotation — show an ad every AD_INTERVAL, surviving page refreshes
     (function () {
         var AD_INTERVAL = @(data?.AdIntervalSeconds ?? 300) * 1000;
         var AD_DURATION = @(data?.AdDurationSeconds ?? 10) * 1000;
-        var adIndex = 0;
+        var STORAGE_KEY = 'kiosk_ad_last_shown';
+        var INDEX_KEY = 'kiosk_ad_index';
         var ads = null;
 
-        function fetchAds() {
-            fetch('/api/public/ads/active')
-                .then(function (r) { return r.ok ? r.json() : []; })
-                .then(function (data) { ads = data; })
-                .catch(function () { ads = []; });
+        function getAdIndex() {
+            return parseInt(localStorage.getItem(INDEX_KEY) || '0', 10);
+        }
+        function setAdIndex(i) {
+            localStorage.setItem(INDEX_KEY, i.toString());
         }
 
-        function showAd() {
-            if (!ads || ads.length === 0) return;
+        function fetchAds() {
+            return fetch('/api/public/ads/active')
+                .then(function (r) { return r.ok ? r.json() : []; })
+                .catch(function () { return []; });
+        }
 
-            var ad = ads[adIndex % ads.length];
-            adIndex++;
-
+        function showAd(ad) {
             var overlay = document.getElementById('adOverlay');
             var title = document.getElementById('adTitle');
             var desc = document.getElementById('adDescription');
@@ -278,16 +280,28 @@
                 overlay.classList.remove('visible');
                 setTimeout(function () {
                     overlay.classList.remove('active');
-                }, 500); // match CSS transition
+                }, 500);
             }, AD_DURATION);
+
+            localStorage.setItem(STORAGE_KEY, Date.now().toString());
         }
 
-        fetchAds();
-        // Refresh ad list every 5 minutes (just before showing)
-        setInterval(function () {
-            fetchAds();
-            setTimeout(showAd, 500); // small delay for fetch to complete
-        }, AD_INTERVAL);
+        fetchAds().then(function (data) {
+            ads = data;
+            if (!ads || ads.length === 0) return;
+
+            var lastShown = parseInt(localStorage.getItem(STORAGE_KEY) || '0', 10);
+            var elapsed = Date.now() - lastShown;
+
+            if (elapsed >= AD_INTERVAL) {
+                // Time to show an ad
+                var idx = getAdIndex();
+                var ad = ads[idx % ads.length];
+                setAdIndex(idx + 1);
+                // Small delay so page renders first
+                setTimeout(function () { showAd(ad); }, 1000);
+            }
+        });
     })();
 </script>
 </body>
