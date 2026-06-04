@@ -9,6 +9,7 @@ public sealed class AppDbContext
 {
     public DbSet<Office> Offices => Set<Office>();
     public DbSet<Announcement> Announcements => Set<Announcement>();
+    public DbSet<Advertisement> Advertisements => Set<Advertisement>();
 
     public AppDbContext(DbContextOptions<AppDbContext> options) : base(options)
     {

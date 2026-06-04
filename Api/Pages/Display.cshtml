@@ -64,6 +64,30 @@
             100% { transform: translateX(-50%); }
         }
 
+        /* Advertisement overlay */
+        .ad-overlay {
+            position: fixed;
+            inset: 0;
+            z-index: 9999;
+            background: linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%);
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 3rem;
+            opacity: 0;
+            transition: opacity 0.5s ease;
+        }
+        .ad-overlay.active { display: flex; }
+        .ad-overlay.visible { opacity: 1; }
+        .ad-overlay .ad-title { font-size: 3.5rem; font-weight: 700; margin-bottom: 1rem; color: #fff; }
+        .ad-overlay .ad-description { font-size: 1.5rem; color: rgba(255,255,255,0.85); max-width: 900px; margin-bottom: 2rem; }
+        .ad-overlay .ad-photos { display: flex; gap: 1.5rem; justify-content: center; flex-wrap: wrap; max-width: 100%; }
+        .ad-overlay .ad-photos img { max-height: 50vh; max-width: 80vw; object-fit: contain; border-radius: 12px; box-shadow: 0 8px 32px rgba(0,0,0,0.4); }
+        .ad-overlay .ad-badge { position: absolute; top: 1.5rem; right: 1.5rem; background: rgba(255,193,7,0.9); color: #1a1a1a; padding: 0.3rem 1rem; border-radius: 6px; font-weight: 700; font-size: 0.85rem; }
+        .ad-progress { position: absolute; bottom: 0; left: 0; height: 4px; background: #ffc107; transition: width linear; }
+
         /* Scale UI based on viewport — baseline 1920px (1080p) = zoom 1 */
         @@media (min-width: 2200px) { body { zoom: 1.15; } }
         @@media (min-width: 2560px) { body { zoom: 1.33; } }
@@ -156,6 +180,15 @@
         </div>
     }
 
+    @* ── Advertisement Overlay ── *@
+    <div class="ad-overlay" id="adOverlay">
+        <span class="ad-badge"><i class="bi bi-megaphone-fill me-1"></i>ADVERTISEMENT</span>
+        <div class="ad-title" id="adTitle"></div>
+        <div class="ad-description" id="adDescription"></div>
+        <div class="ad-photos" id="adPhotos"></div>
+        <div class="ad-progress" id="adProgress"></div>
+    </div>
+
     @* ── Footer ── *@
     <footer class="text-center text-white-50 small py-2">
         @{
@@ -187,6 +220,74 @@
             track.style.setProperty('--ticker-duration', duration + 's');
             track.style.animationDuration = duration + 's';
         }
+    })();
+
+    // Advertisement rotation — show an ad every 5 minutes for 10 seconds
+    (function () {
+        var AD_INTERVAL = 5 * 60 * 1000; // 5 minutes
+        var AD_DURATION = 10 * 1000;      // 10 seconds
+        var adIndex = 0;
+        var ads = null;
+
+        function fetchAds() {
+            fetch('/api/public/ads/active')
+                .then(function (r) { return r.ok ? r.json() : []; })
+                .then(function (data) { ads = data; })
+                .catch(function () { ads = []; });
+        }
+
+        function showAd() {
+            if (!ads || ads.length === 0) return;
+
+            var ad = ads[adIndex % ads.length];
+            adIndex++;
+
+            var overlay = document.getElementById('adOverlay');
+            var title = document.getElementById('adTitle');
+            var desc = document.getElementById('adDescription');
+            var photos = document.getElementById('adPhotos');
+            var progress = document.getElementById('adProgress');
+
+            title.textContent = ad.title;
+            desc.textContent = ad.description;
+            photos.innerHTML = '';
+
+            if (ad.photos && ad.photos.length > 0) {
+                ad.photos.forEach(function (p) {
+                    var img = document.createElement('img');
+                    img.src = '/api/public/ads/' + ad.id + '/photos/' + p.id;
+                    img.alt = p.originalFileName;
+                    photos.appendChild(img);
+                });
+            }
+
+            // Animate in
+            overlay.classList.add('active');
+            progress.style.transition = 'none';
+            progress.style.width = '0%';
+            requestAnimationFrame(function () {
+                overlay.classList.add('visible');
+                requestAnimationFrame(function () {
+                    progress.style.transition = 'width ' + (AD_DURATION / 1000) + 's linear';
+                    progress.style.width = '100%';
+                });
+            });
+
+            // Hide after duration
+            setTimeout(function () {
+                overlay.classList.remove('visible');
+                setTimeout(function () {
+                    overlay.classList.remove('active');
+                }, 500); // match CSS transition
+            }, AD_DURATION);
+        }
+
+        fetchAds();
+        // Refresh ad list every 5 minutes (just before showing)
+        setInterval(function () {
+            fetchAds();
+            setTimeout(showAd, 500); // small delay for fetch to complete
+        }, AD_INTERVAL);
     })();
 </script>
 </body>

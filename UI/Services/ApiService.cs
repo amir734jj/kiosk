@@ -8,6 +8,7 @@ public sealed class ApiService(
     IAuthApi authApi,
     IOfficesApi officesApi,
     IAnnouncementsApi announcementsApi,
+    IAdvertisementsApi advertisementsApi,
     IUsersApi usersApi,
     IPublicApi publicApi,
     IGlobalConfigApi globalConfigApi,
@@ -119,6 +120,32 @@ public sealed class ApiService(
     }
 
     public Task DeleteAnnouncementAsync(int id) => announcementsApi.DeleteAsync(id);
+
+    // --- Advertisements ---
+    public Task<List<AdvertisementDto>> GetAdvertisementsAsync() => advertisementsApi.GetAllAsync();
+
+    public async Task<(bool Ok, string? Error)> CreateAdvertisementAsync(CreateAdvertisementRequest req)
+    {
+        try { await advertisementsApi.CreateAsync(req); return (true, null); }
+        catch (ApiException ex) { return (false, ex.Content); }
+    }
+
+    public async Task<bool> UpdateAdvertisementAsync(int id, UpdateAdvertisementRequest req)
+    {
+        try { await advertisementsApi.UpdateAsync(id, req); return true; }
+        catch { return false; }
+    }
+
+    public Task DeleteAdvertisementAsync(int id) => advertisementsApi.DeleteAsync(id);
+
+    public async Task<(bool Ok, string? Error)> UploadAdPhotoAsync(int id, StreamPart file)
+    {
+        try { await advertisementsApi.UploadPhotoAsync(id, file); return (true, null); }
+        catch (ApiException ex) { return (false, ex.Content); }
+    }
+
+    public Task<List<AdvertisementPhotoDto>> GetAdPhotosAsync(int id) => advertisementsApi.GetPhotosAsync(id);
+    public Task DeleteAdPhotoAsync(int id, string photoId) => advertisementsApi.DeletePhotoAsync(id, photoId);
 
     // --- Users ---
     public Task<List<UserDto>> GetUsersAsync() => usersApi.GetAllAsync();

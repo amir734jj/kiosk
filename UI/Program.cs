@@ -38,6 +38,7 @@ foreach (var apiType in new[]
     typeof(IAuthApi),
     typeof(IOfficesApi),
     typeof(IAnnouncementsApi),
+    typeof(IAdvertisementsApi),
     typeof(IUsersApi),
     typeof(IPublicApi),
     typeof(IGlobalConfigApi)
