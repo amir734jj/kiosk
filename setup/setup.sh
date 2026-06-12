@@ -16,7 +16,7 @@ echo "Display URL: $APP_URL"
 # Install dependencies
 echo "Installing Chromium and utilities..."
 sudo apt-get update -qq
-sudo apt-get install -y -qq chromium unclutter
+sudo apt-get install -y -qq chromium unclutter xdotool curl
 
 # Force 1080p resolution (Raspberry Pi defaults to 4K on capable displays)
 BOOT_CONFIG="/boot/firmware/config.txt"
@@ -41,8 +41,34 @@ sudo mkdir -p "$KIOSK_DIR"
 # Save URL for reference
 echo "$APP_URL" | sudo tee "$KIOSK_DIR/url.txt" > /dev/null
 
-# Create kiosk launcher
-sudo tee "$KIOSK_DIR/start.sh" > /dev/null << SCRIPT
+# Create Chromium launcher (single source of truth for all launch flags)
+sudo tee "$KIOSK_DIR/launch.sh" > /dev/null << 'LAUNCH'
+#!/bin/bash
+# Launch Chromium in kiosk mode. Called by start.sh, watchdog.sh, restart.sh.
+# Always kills any existing Chromium instance before launching.
+URL="$(cat /opt/kiosk/url.txt)"
+
+pkill -f chromium || true
+sleep 2
+
+exec chromium \
+    --noerrdialogs \
+    --disable-infobars \
+    --password-store=basic \
+    --kiosk \
+    --disable-translate \
+    --disable-features=TranslateUI \
+    --disable-session-crashed-bubble \
+    --disable-component-update \
+    --no-first-run \
+    --start-fullscreen \
+    --autoplay-policy=no-user-gesture-required \
+    "$URL"
+LAUNCH
+sudo chmod +x "$KIOSK_DIR/launch.sh"
+
+# Create kiosk startup script
+sudo tee "$KIOSK_DIR/start.sh" > /dev/null << 'SCRIPT'
 #!/bin/bash
 sleep 5
 
@@ -55,24 +81,115 @@ xset s noblank
 unclutter -idle 0.5 -root &
 
 # Launch Chromium in kiosk mode
-chromium \\
-    --noerrdialogs \\
-    --disable-infobars \\
-    --password-store=basic \\
-    --kiosk \\
-    --disable-translate \\
-    --disable-features=TranslateUI \\
-    --disable-session-crashed-bubble \\
-    --disable-component-update \\
-    --no-first-run \\
-    --start-fullscreen \\
-    --autoplay-policy=no-user-gesture-required \\
-    "$APP_URL"
+/opt/kiosk/launch.sh &
+
+# Start the watchdog to recover from page-load failures
+/opt/kiosk/watchdog.sh &
 SCRIPT
 sudo chmod +x "$KIOSK_DIR/start.sh"
 
-# Add cron job for weekly Chromium update + reboot (Sunday 3am)
-(crontab -l 2>/dev/null | grep -v 'apt-get.*chromium'; echo "0 3 * * 0 sudo apt-get update -qq && sudo apt-get upgrade -y -qq chromium && sudo reboot") | crontab -
+# Create watchdog script — detects Chromium error pages and refreshes/restarts
+sudo tee "$KIOSK_DIR/watchdog.sh" > /dev/null << 'WATCHDOG'
+#!/bin/bash
+# Watchdog: monitors Chromium kiosk health.
+#
+# Strategy (avoids hammering when the site is genuinely down):
+#   - Check every 2 min whether the URL is reachable
+#   - On failure: send F5 to refresh (clears error page when connectivity returns)
+#   - After 3 consecutive refresh failures: restart Chromium once
+#   - After each restart, double the check interval (backoff: 2→4→8→10 min cap)
+#   - After 3 restarts with no recovery: stop restarting, just poll quietly
+#     and wait for the site to come back
+#   - Once the site responds again: refresh the page and reset everything
+
+URL="$(cat /opt/kiosk/url.txt)"
+
+FAIL_COUNT=0              # consecutive failed health checks
+RESTART_COUNT=0           # how many times we've restarted Chromium
+MAX_FAIL_BEFORE_RESTART=3 # refresh attempts before restarting Chromium
+MAX_RESTARTS=3            # stop restarting after this many (site is truly down)
+BASE_INTERVAL=120         # 2 minutes
+CURRENT_INTERVAL=$BASE_INTERVAL
+MAX_INTERVAL=600          # 10 minute cap on backoff
+WAS_DOWN=false            # track if we were in a failure state
+
+restart_chromium() {
+    RESTART_COUNT=$((RESTART_COUNT + 1))
+    logger -t kiosk-watchdog "Restarting Chromium (attempt $RESTART_COUNT/$MAX_RESTARTS)..."
+    /opt/kiosk/launch.sh &
+    FAIL_COUNT=0
+
+    # Backoff: double the interval after each restart, up to the cap
+    CURRENT_INTERVAL=$((CURRENT_INTERVAL * 2))
+    if [ "$CURRENT_INTERVAL" -gt "$MAX_INTERVAL" ]; then
+        CURRENT_INTERVAL=$MAX_INTERVAL
+    fi
+    logger -t kiosk-watchdog "Next check in ${CURRENT_INTERVAL}s"
+}
+
+while true; do
+    sleep "$CURRENT_INTERVAL"
+
+    # 1. Make sure Chromium is still running; if crashed, always relaunch
+    if ! pgrep -f 'chromium.*--kiosk' > /dev/null 2>&1; then
+        logger -t kiosk-watchdog "Chromium not running — relaunching"
+        /opt/kiosk/launch.sh &
+        continue
+    fi
+
+    # 2. Health check — HTTP request to the target URL
+    HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 "$URL" 2>/dev/null)
+
+    if [ "$HTTP_CODE" -ge 200 ] && [ "$HTTP_CODE" -lt 400 ]; then
+        # === SITE IS UP ===
+        if [ "$WAS_DOWN" = true ]; then
+            logger -t kiosk-watchdog "Site is back (HTTP $HTTP_CODE) — refreshing page"
+            xdotool key F5
+        fi
+        # Reset everything
+        FAIL_COUNT=0
+        RESTART_COUNT=0
+        CURRENT_INTERVAL=$BASE_INTERVAL
+        WAS_DOWN=false
+    else
+        # === SITE IS DOWN ===
+        FAIL_COUNT=$((FAIL_COUNT + 1))
+        WAS_DOWN=true
+        logger -t kiosk-watchdog "Page unreachable (HTTP $HTTP_CODE) — failure $FAIL_COUNT"
+
+        if [ "$FAIL_COUNT" -ge "$MAX_FAIL_BEFORE_RESTART" ]; then
+            if [ "$RESTART_COUNT" -lt "$MAX_RESTARTS" ]; then
+                restart_chromium
+            else
+                # Exhausted restarts — site is genuinely down.
+                # Just poll quietly at max interval; don't keep restarting.
+                CURRENT_INTERVAL=$MAX_INTERVAL
+                logger -t kiosk-watchdog "Site appears down. Waiting at ${CURRENT_INTERVAL}s intervals for recovery."
+            fi
+        else
+            # Try a simple page refresh first
+            xdotool key F5
+        fi
+    fi
+done
+WATCHDOG
+sudo chmod +x "$KIOSK_DIR/watchdog.sh"
+
+# Create restart helper (used by daily cron and can be called manually)
+sudo tee "$KIOSK_DIR/restart.sh" > /dev/null << 'RESTART'
+#!/bin/bash
+# Kill Chromium and let the watchdog relaunch it
+logger -t kiosk-restart "Chromium restart requested"
+pkill -f chromium || true
+RESTART
+sudo chmod +x "$KIOSK_DIR/restart.sh"
+
+# Add cron jobs:
+#   - Daily Chromium restart at 4am (watchdog relaunches it automatically)
+#   - Weekly Chromium update (Sunday 3am)
+(crontab -l 2>/dev/null | grep -v 'apt-get.*chromium' | grep -v 'Daily kiosk'; \
+ echo "0 3 * * 0 sudo apt-get update -qq && sudo apt-get upgrade -y -qq chromium && sudo reboot"; \
+ echo "0 4 * * * /opt/kiosk/restart.sh  # Daily kiosk refresh") | crontab -
 
 # Configure autostart (LXDE - Raspberry Pi OS)
 mkdir -p "$HOME/.config/lxsession/LXDE-pi"

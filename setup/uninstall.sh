@@ -10,10 +10,11 @@ KIOSK_DIR="/opt/kiosk"
 echo "=== Office Kiosk Uninstall ==="
 
 pkill -f "chromium.*kiosk" 2>/dev/null || true
+pkill -f watchdog.sh 2>/dev/null || true
 pkill unclutter 2>/dev/null || true
 
-# Remove cron jobs
-(crontab -l 2>/dev/null | grep -v 'apt-get.*chromium') | crontab - 2>/dev/null || true
+# Remove cron jobs (weekly update + daily restart)
+(crontab -l 2>/dev/null | grep -v 'apt-get.*chromium' | grep -v 'kiosk') | crontab - 2>/dev/null || true
 
 # Remove autostart
 rm -f "$HOME/.config/autostart/kiosk.desktop"
