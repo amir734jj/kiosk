@@ -22,7 +22,7 @@ public class UsersController(UserManager<AppUser> users) : ControllerBase
     {
         var userList = await users.Users
             .Include(u => u.Office)
-            .OrderBy(u => u.UserName)
+            .OrderBy(u => u.Email)
             .ToListAsync();
 
         var result = new List<UserDto>();
@@ -31,7 +31,7 @@ public class UsersController(UserManager<AppUser> users) : ControllerBase
             var userRoles = await users.GetRolesAsync(u);
             result.Add(new UserDto(
                 u.Id,
-                u.UserName!,
+                u.Email ?? u.UserName!,
                 userRoles.FirstOrDefault() ?? Roles.User,
                 u.IsActive,
                 u.OfficeId,

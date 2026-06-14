@@ -15,11 +15,11 @@ public sealed class ApiService(
     AuthService auth)
 {
     // --- Auth ---
-    public async Task<string?> LoginAsync(string username, string password)
+    public async Task<string?> LoginAsync(string email, string password)
     {
         try
         {
-            var response = await authApi.LoginAsync(new LoginRequest(username, password));
+            var response = await authApi.LoginAsync(new LoginRequest(email, password));
             await auth.SetTokenAsync(response.Token, response.Role, response.UserId);
             return null;
         }
@@ -29,15 +29,15 @@ public sealed class ApiService(
         }
         catch (ApiException)
         {
-            return "Invalid username or password.";
+            return "Invalid email or password.";
         }
     }
 
-    public async Task<(bool Success, string? Error, bool IsActive)> RegisterAsync(string username, string password, string passwordConfirm)
+    public async Task<(bool Success, string? Error, bool IsActive)> RegisterAsync(string email, string password, string passwordConfirm)
     {
         try
         {
-            var result = await authApi.RegisterAsync(new RegisterRequest(username, password, passwordConfirm));
+            var result = await authApi.RegisterAsync(new RegisterRequest(email, password, passwordConfirm));
             return (true, null, result.IsActive);
         }
         catch (ApiException ex)

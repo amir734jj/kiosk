@@ -17,7 +17,7 @@
 
                 <EditForm Model="_model" OnValidSubmit="HandleLogin" FormName="login">
                     <div class="mb-3">
-                        <HxInputText Label="Username" @bind-Value="_model.Username" />
+                        <HxInputText Label="Email" @bind-Value="_model.Email" />
                     </div>
                     <div class="mb-3">
                         <HxInputText Label="Password" @bind-Value="_model.Password" Type="InputType.Password" />
@@ -42,7 +42,7 @@
 
     private class LoginModel
     {
-        public string Username { get; set; } = "";
+        public string Email { get; set; } = "";
         public string Password { get; set; } = "";
     }
 
@@ -52,7 +52,7 @@
         _loading = true;
         try
         {
-            var error = await Api.LoginAsync(_model.Username, _model.Password);
+            var error = await Api.LoginAsync(_model.Email, _model.Password);
             if (error is not null)
             {
                 _error = error;

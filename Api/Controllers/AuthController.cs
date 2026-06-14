@@ -23,9 +23,9 @@ public class AuthController(
     [HttpPost("register")]
     public async Task<IActionResult> Register(RegisterRequest req)
     {
-        if (string.IsNullOrWhiteSpace(req.Username) || req.Username.Length < 3)
+        if (string.IsNullOrWhiteSpace(req.Email) || !req.Email.Contains('@'))
         {
-            return BadRequest("Username must be at least 3 characters.");
+            return BadRequest("A valid email address is required.");
         }
 
         if (req.Password != req.PasswordConfirm)
@@ -46,7 +46,8 @@ public class AuthController(
 
         var user = new AppUser
         {
-            UserName = req.Username,
+            UserName = req.Email,
+            Email = req.Email,
             IsActive = isFirstUser
         };
 
@@ -64,10 +65,10 @@ public class AuthController(
     [EnableRateLimiting("login")]
     public async Task<IActionResult> Login(LoginRequest req)
     {
-        var user = await users.FindByNameAsync(req.Username);
+        var user = await users.FindByEmailAsync(req.Email);
         if (user is null || !await users.CheckPasswordAsync(user, req.Password))
         {
-            return Unauthorized("Invalid username or password.");
+            return Unauthorized("Invalid email or password.");
         }
 
         if (!user.IsActive)
@@ -102,7 +103,7 @@ public class AuthController(
         }
 
         var userRoles = await users.GetRolesAsync(user);
-        return Ok(new MeResponse(user.UserName!, userRoles.FirstOrDefault() ?? Roles.User, user.OfficeId));
+        return Ok(new MeResponse(user.Email ?? user.UserName!, userRoles.FirstOrDefault() ?? Roles.User, user.OfficeId));
     }
 
     [HttpPost("impersonate/{userId:int}")]
