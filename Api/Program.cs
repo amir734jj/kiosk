@@ -7,6 +7,7 @@ using Api.Data;
 using Api.Data.Entities;
 using Api.Extensions;
 using Api.Interfaces;
+using Api.Logging;
 using Api.Middleware;
 using Api.Services;
 using Api.Utilities;
@@ -23,7 +24,7 @@ using Serilog.Formatting.Compact;
 
 var builder = WebApplication.CreateBuilder(args);
 
-Log.Logger = new LoggerConfiguration()
+var loggerConfiguration = new LoggerConfiguration()
     .MinimumLevel.Information()
     .MinimumLevel.Override("Microsoft", LogEventLevel.Warning)
     .MinimumLevel.Override("System", LogEventLevel.Error)
@@ -34,13 +35,31 @@ Log.Logger = new LoggerConfiguration()
         requestPath.ToString().Contains("/api/health"))
     .Enrich.WithProperty("Application", "kiosk-api")
     .Enrich.FromLogContext()
+    .Enrich.WithClientIp()
+    .Enrich.WithRequestHeader("User-Agent", "Device")
+    .Enrich.With(new UsernameEnricher(new HttpContextAccessor()))
     .WriteTo.Console(outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] {user} {Message:lj}{NewLine}{Exception}")
     .WriteTo.File(
         new CompactJsonFormatter(),
         path: "logs/api-.json",
         rollingInterval: RollingInterval.Day,
-        retainedFileCountLimit: 7)
-    .CreateLogger();
+        retainedFileCountLimit: 7);
+
+var betterStackToken = builder.Configuration["BetterStack:SourceToken"];
+var betterStackHost = builder.Configuration["BetterStack:IngestingHost"];
+if (!string.IsNullOrWhiteSpace(betterStackToken) && !string.IsNullOrWhiteSpace(betterStackHost))
+{
+    loggerConfiguration.WriteTo.BetterStack(
+        sourceToken: betterStackToken,
+        betterStackEndpoint: $"https://{betterStackHost}");
+}
+
+Log.Logger = loggerConfiguration.CreateLogger();
+
+if (!string.IsNullOrWhiteSpace(betterStackToken) && !string.IsNullOrWhiteSpace(betterStackHost))
+    Log.Information("BetterStack log shipping enabled (host {Host})", betterStackHost);
+else
+    Log.Information("BetterStack log shipping disabled (no source token configured)");
 
 builder.Host.UseSerilog();
 
@@ -113,6 +132,7 @@ builder.Services.AddRazorPages();
 builder.Services.AddMemoryCache();
 builder.Services.AddHealthChecks();
 builder.Services.AddHttpClient();
+builder.Services.AddHttpContextAccessor();
 
 var spacesKey = builder.Configuration["SPACES_KEY"];
 var spacesSecret = builder.Configuration["SPACES_SECRET"];
@@ -197,6 +217,8 @@ app.UseSerilogRequestLogging(opts =>
             : "anonymous";
 
         diagnosticContext.Set("user", user);
+        diagnosticContext.Set("ClientIp", httpContext.Connection.RemoteIpAddress?.ToString());
+        diagnosticContext.Set("Device", httpContext.Request.Headers.UserAgent.ToString());
     };
 });
 
