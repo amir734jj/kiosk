@@ -1,3 +1,5 @@
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
 using Api.Extensions;
 using Microsoft.AspNetCore.Http;
 using Serilog.Core;
@@ -14,9 +16,11 @@ public class UsernameEnricher(IHttpContextAccessor httpContextAccessor) : ILogEv
             return;
 
         var username = httpContext.User.TryGetUsername();
-        if (string.IsNullOrEmpty(username))
-            return;
+        if (!string.IsNullOrEmpty(username))
+            logEvent.AddOrUpdateProperty(propertyFactory.CreateProperty("User", username));
 
-        logEvent.AddOrUpdateProperty(propertyFactory.CreateProperty("User", username));
+        var userId = httpContext.User.FindFirstValue(JwtRegisteredClaimNames.Sub);
+        if (!string.IsNullOrEmpty(userId))
+            logEvent.AddOrUpdateProperty(propertyFactory.CreateProperty("UserId", userId));
     }
 }
