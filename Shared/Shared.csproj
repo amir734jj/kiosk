@@ -8,8 +8,8 @@
 
   <ItemGroup>
     <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
-    <PackageReference Include="Refit" Version="10.1.6" />
-    <PackageReference Include="Refit.Newtonsoft.Json" Version="10.1.6" />
+    <PackageReference Include="Refit" Version="11.2.0" />
+    <PackageReference Include="Refit.Newtonsoft.Json" Version="11.2.0" />
   </ItemGroup>
 
 </Project>
