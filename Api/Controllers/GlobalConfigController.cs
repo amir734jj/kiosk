@@ -63,6 +63,7 @@ public sealed class GlobalConfigController(IGlobalConfigService configService, I
 
     [AllowAnonymous]
     [HttpGet("background-image/{id}")]
+    [ResponseCache(Duration = 900)]
     public async Task<IActionResult> DownloadBackgroundImage(string id)
     {
         var result = await backgroundImageStore.GetByIdAsync(id);

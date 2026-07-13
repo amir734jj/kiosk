@@ -1,9 +1,11 @@
 using Api.Interfaces;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Shared.Contracts;
 
 namespace Api.Pages;
 
+[ResponseCache(Duration = 60)]
 public class DisplayModel(IOfficeService officeService, IAnnouncementService announcementService, IWeatherService weatherService, IGlobalConfigService configService, ICityImageService cityImageService, IHolidayService holidayService) : PageModel
 {
     public PublicDisplayDto? Data { get; private set; }
