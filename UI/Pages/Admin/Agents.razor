@@ -1,0 +1,96 @@
+@page "/admin/agents"
+@implements IDisposable
+@inject ApiService Api
+
+<PageTitle>Kiosk Agents</PageTitle>
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h2><i class="bi bi-display me-2"></i>Kiosk Agents</h2>
+    <HxButton Text="Refresh" Color="ThemeColor.Secondary" Icon="BootstrapIcon.ArrowClockwise" OnClick="Load" />
+</div>
+
+@if (_items is null)
+{
+    <div class="text-center py-5"><HxSpinner /></div>
+}
+else if (_items.Count == 0)
+{
+    <HxAlert Color="ThemeColor.Info">No kiosk agents have checked in yet.</HxAlert>
+}
+else
+{
+    <div class="table-responsive">
+        <table class="table table-hover align-middle">
+            <thead class="table-dark">
+                <tr>
+                    <th>Status</th>
+                    <th>Machine</th>
+                    <th>Version</th>
+                    <th>Chromium</th>
+                    <th>Display URL</th>
+                    <th>IP</th>
+                    <th>Last Seen</th>
+                    <th>First Seen</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var a in _items)
+                {
+                    var online = IsOnline(a);
+                    <tr class="@(online ? "" : "table-secondary")">
+                        <td>
+                            <HxBadge Color="@(online ? ThemeColor.Success : ThemeColor.Danger)">
+                                <i class="bi @(online ? "bi-check-circle" : "bi-x-circle") me-1"></i>@(online ? "Online" : "Offline")
+                            </HxBadge>
+                        </td>
+                        <td><strong>@a.MachineName</strong></td>
+                        <td><code>@a.AgentVersion</code></td>
+                        <td>
+                            <HxBadge Color="@(a.ChromiumRunning ? ThemeColor.Success : ThemeColor.Warning)">
+                                @(a.ChromiumRunning ? "Running" : "Stopped")
+                            </HxBadge>
+                        </td>
+                        <td class="text-truncate" style="max-width:280px">
+                            <a href="@a.DisplayUrl" target="_blank" rel="noopener">@a.DisplayUrl</a>
+                        </td>
+                        <td>@(a.IpAddress ?? "—")</td>
+                        <td title="@a.LastSeenAt.LocalDateTime.ToString("g")">@Relative(a.LastSeenAt)</td>
+                        <td title="@a.FirstSeenAt.LocalDateTime.ToString("g")">@a.FirstSeenAt.LocalDateTime.ToString("MMM d, yyyy")</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+    <p class="text-muted small">Agents are considered offline if they have not checked in for over @OfflineThreshold.TotalMinutes minutes. This list auto-refreshes.</p>
+}
+
+@code {
+    private static readonly TimeSpan OfflineThreshold = TimeSpan.FromMinutes(5);
+    private List<AgentStatusDto>? _items;
+    private Timer? _timer;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Load();
+        _timer = new Timer(async _ => await InvokeAsync(Load), null, TimeSpan.FromSeconds(15), TimeSpan.FromSeconds(15));
+    }
+
+    private async Task Load()
+    {
+        _items = await Api.GetAgentsAsync();
+        StateHasChanged();
+    }
+
+    private static bool IsOnline(AgentStatusDto a) => DateTimeOffset.UtcNow - a.LastSeenAt < OfflineThreshold;
+
+    private static string Relative(DateTimeOffset when)
+    {
+        var delta = DateTimeOffset.UtcNow - when;
+        if (delta < TimeSpan.FromSeconds(60)) return "just now";
+        if (delta < TimeSpan.FromMinutes(60)) return $"{(int)delta.TotalMinutes} min ago";
+        if (delta < TimeSpan.FromHours(24)) return $"{(int)delta.TotalHours} hr ago";
+        return $"{(int)delta.TotalDays} d ago";
+    }
+
+    public void Dispose() => _timer?.Dispose();
+}

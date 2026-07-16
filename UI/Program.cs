@@ -41,7 +41,8 @@ foreach (var apiType in new[]
     typeof(IAdvertisementsApi),
     typeof(IUsersApi),
     typeof(IPublicApi),
-    typeof(IGlobalConfigApi)
+    typeof(IGlobalConfigApi),
+    typeof(IAgentsApi)
 })
 {
     builder.Services

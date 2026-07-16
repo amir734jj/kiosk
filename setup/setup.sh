@@ -3,22 +3,46 @@ set -e
 
 # =========================================
 # Office Kiosk - Setup
-# Installs Chromium kiosk mode on a
-# Raspberry Pi pointing to the display URL
+# Installs the self-updating C# kiosk agent
+# (KioskAgent) on a Raspberry Pi. The agent
+# launches Chromium in kiosk mode, watches
+# its health, ships logs to Better Stack and
+# updates itself via Velopack.
 # =========================================
 
-APP_URL="${1:-https://kiosk.hesamian.com/display}"
+# Args / env:
+#   $1  BACKEND_URL       (default https://kiosk.hesamian.com)
+#   AGENT_RELEASE_URL     override the AppImage download URL
+BACKEND_URL="${1:-${KIOSK_BACKEND_URL:-https://kiosk.hesamian.com}}"
+BACKEND_URL="${BACKEND_URL%/}"
 KIOSK_DIR="/opt/kiosk"
+AGENT_BIN="$KIOSK_DIR/KioskAgent.AppImage"
+AGENT_RELEASE_URL="${AGENT_RELEASE_URL:-https://github.com/amir734jj/kiosk/releases/latest/download/KioskAgent.AppImage}"
 
 echo "=== Office Kiosk Setup ==="
-echo "Display URL: $APP_URL"
+echo "Backend URL: $BACKEND_URL"
+echo "Agent from:  $AGENT_RELEASE_URL"
 
-# Install dependencies
+# --- Architecture check -------------------------------------------------------
+# The agent is published for 64-bit ARM (linux-arm64). 32-bit Pi OS won't run it.
+ARCH="$(uname -m)"
+if [ "$ARCH" != "aarch64" ]; then
+    echo "WARNING: this Pi reports architecture '$ARCH', but the agent needs 64-bit"
+    echo "         Raspberry Pi OS (aarch64). Install the 64-bit OS or the agent"
+    echo "         will fail to start."
+fi
+
+# --- Dependencies -------------------------------------------------------------
+# The agent shells out to chromium/unclutter/xdotool/xset, so they must be present.
 echo "Installing Chromium and utilities..."
 sudo apt-get update -qq
-sudo apt-get install -y -qq chromium unclutter xdotool curl
+# Chromium package name differs across Pi OS releases (chromium vs chromium-browser).
+sudo apt-get install -y -qq chromium || sudo apt-get install -y -qq chromium-browser || true
+sudo apt-get install -y -qq unclutter xdotool curl x11-xserver-utils
+# FUSE is needed to run the AppImage; the package was renamed on Bookworm.
+sudo apt-get install -y -qq libfuse2 || sudo apt-get install -y -qq libfuse2t64 || true
 
-# Force 1080p resolution (Raspberry Pi defaults to 4K on capable displays)
+# --- Force 1080p resolution (Pi defaults to 4K on capable displays) -----------
 BOOT_CONFIG="/boot/firmware/config.txt"
 if [ ! -f "$BOOT_CONFIG" ]; then
     BOOT_CONFIG="/boot/config.txt"
@@ -35,170 +59,49 @@ framebuffer_height=1080
 HDMI
 fi
 
-# Create kiosk directory
+# --- Remove any legacy bash-based kiosk install -------------------------------
+# Older setups wrote start.sh/watchdog.sh/launch.sh + cron jobs. Clear them so
+# the agent is the single source of truth.
+pkill -f watchdog.sh 2>/dev/null || true
+(crontab -l 2>/dev/null | grep -v 'apt-get.*chromium' | grep -v 'kiosk') | crontab - 2>/dev/null || true
+sudo rm -f "$KIOSK_DIR"/watchdog.sh "$KIOSK_DIR"/launch.sh "$KIOSK_DIR"/restart.sh "$KIOSK_DIR"/url.txt
+
+# --- Install the agent --------------------------------------------------------
 sudo mkdir -p "$KIOSK_DIR"
+echo "Downloading kiosk agent..."
+sudo curl -fSL "$AGENT_RELEASE_URL" -o "$AGENT_BIN"
+sudo chmod +x "$AGENT_BIN"
 
-# Save URL for reference
-echo "$APP_URL" | sudo tee "$KIOSK_DIR/url.txt" > /dev/null
+# Backend URL for the agent to fetch its runtime config from.
+sudo tee "$KIOSK_DIR/kiosk.env" > /dev/null << ENV
+KIOSK_BACKEND_URL=$BACKEND_URL
+ENV
 
-# Create Chromium launcher (single source of truth for all launch flags)
-sudo tee "$KIOSK_DIR/launch.sh" > /dev/null << 'LAUNCH'
-#!/bin/bash
-# Launch Chromium in kiosk mode. Called by start.sh, watchdog.sh, restart.sh.
-# Always kills any existing Chromium instance before launching.
-URL="$(cat /opt/kiosk/url.txt)"
-
-pkill -f chromium || true
-sleep 2
-
-exec chromium \
-    --noerrdialogs \
-    --disable-infobars \
-    --password-store=basic \
-    --kiosk \
-    --disable-translate \
-    --disable-features=TranslateUI \
-    --disable-session-crashed-bubble \
-    --disable-component-update \
-    --no-first-run \
-    --start-fullscreen \
-    --autoplay-policy=no-user-gesture-required \
-    "$URL"
-LAUNCH
-sudo chmod +x "$KIOSK_DIR/launch.sh"
-
-# Create kiosk startup script
+# Launcher wrapper: loads env, runs the agent from a writable working dir so it
+# can roll log files and stage Velopack updates.
 sudo tee "$KIOSK_DIR/start.sh" > /dev/null << 'SCRIPT'
 #!/bin/bash
 sleep 5
-
-# Disable screen blanking
-xset s off
-xset -dpms
-xset s noblank
-
-# Hide mouse cursor
-unclutter -idle 0.5 -root &
-
-# Launch Chromium in kiosk mode
-/opt/kiosk/launch.sh &
-
-# Start the watchdog to recover from page-load failures
-/opt/kiosk/watchdog.sh &
+set -a
+. /opt/kiosk/kiosk.env
+set +a
+cd /opt/kiosk
+exec /opt/kiosk/KioskAgent.AppImage "$KIOSK_BACKEND_URL"
 SCRIPT
 sudo chmod +x "$KIOSK_DIR/start.sh"
 
-# Create watchdog script — detects Chromium error pages and refreshes/restarts
-sudo tee "$KIOSK_DIR/watchdog.sh" > /dev/null << 'WATCHDOG'
-#!/bin/bash
-# Watchdog: monitors Chromium kiosk health.
-#
-# Strategy (avoids hammering when the site is genuinely down):
-#   - Check every 2 min whether the URL is reachable
-#   - On failure: send F5 to refresh (clears error page when connectivity returns)
-#   - After 3 consecutive refresh failures: restart Chromium once
-#   - After each restart, double the check interval (backoff: 2→4→8→10 min cap)
-#   - After 3 restarts with no recovery: stop restarting, just poll quietly
-#     and wait for the site to come back
-#   - Once the site responds again: refresh the page and reset everything
+# The agent runs as the desktop user and writes rolling logs + stages Velopack
+# updates inside its working dir, so that user must own /opt/kiosk.
+sudo chown -R "$USER":"$USER" "$KIOSK_DIR"
 
-URL="$(cat /opt/kiosk/url.txt)"
-
-FAIL_COUNT=0              # consecutive failed health checks
-RESTART_COUNT=0           # how many times we've restarted Chromium
-MAX_FAIL_BEFORE_RESTART=3 # refresh attempts before restarting Chromium
-MAX_RESTARTS=3            # stop restarting after this many (site is truly down)
-BASE_INTERVAL=120         # 2 minutes
-CURRENT_INTERVAL=$BASE_INTERVAL
-MAX_INTERVAL=600          # 10 minute cap on backoff
-WAS_DOWN=false            # track if we were in a failure state
-
-restart_chromium() {
-    RESTART_COUNT=$((RESTART_COUNT + 1))
-    logger -t kiosk-watchdog "Restarting Chromium (attempt $RESTART_COUNT/$MAX_RESTARTS)..."
-    /opt/kiosk/launch.sh &
-    FAIL_COUNT=0
-
-    # Backoff: double the interval after each restart, up to the cap
-    CURRENT_INTERVAL=$((CURRENT_INTERVAL * 2))
-    if [ "$CURRENT_INTERVAL" -gt "$MAX_INTERVAL" ]; then
-        CURRENT_INTERVAL=$MAX_INTERVAL
-    fi
-    logger -t kiosk-watchdog "Next check in ${CURRENT_INTERVAL}s"
-}
-
-while true; do
-    sleep "$CURRENT_INTERVAL"
-
-    # 1. Make sure Chromium is still running; if crashed, always relaunch
-    if ! pgrep -f 'chromium.*--kiosk' > /dev/null 2>&1; then
-        logger -t kiosk-watchdog "Chromium not running — relaunching"
-        /opt/kiosk/launch.sh &
-        continue
-    fi
-
-    # 2. Health check — HTTP request to the target URL
-    HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 "$URL" 2>/dev/null)
-
-    if [ "$HTTP_CODE" -ge 200 ] && [ "$HTTP_CODE" -lt 400 ]; then
-        # === SITE IS UP ===
-        if [ "$WAS_DOWN" = true ]; then
-            logger -t kiosk-watchdog "Site is back (HTTP $HTTP_CODE) — refreshing page"
-            xdotool key F5
-        fi
-        # Reset everything
-        FAIL_COUNT=0
-        RESTART_COUNT=0
-        CURRENT_INTERVAL=$BASE_INTERVAL
-        WAS_DOWN=false
-    else
-        # === SITE IS DOWN ===
-        FAIL_COUNT=$((FAIL_COUNT + 1))
-        WAS_DOWN=true
-        logger -t kiosk-watchdog "Page unreachable (HTTP $HTTP_CODE) — failure $FAIL_COUNT"
-
-        if [ "$FAIL_COUNT" -ge "$MAX_FAIL_BEFORE_RESTART" ]; then
-            if [ "$RESTART_COUNT" -lt "$MAX_RESTARTS" ]; then
-                restart_chromium
-            else
-                # Exhausted restarts — site is genuinely down.
-                # Just poll quietly at max interval; don't keep restarting.
-                CURRENT_INTERVAL=$MAX_INTERVAL
-                logger -t kiosk-watchdog "Site appears down. Waiting at ${CURRENT_INTERVAL}s intervals for recovery."
-            fi
-        else
-            # Try a simple page refresh first
-            xdotool key F5
-        fi
-    fi
-done
-WATCHDOG
-sudo chmod +x "$KIOSK_DIR/watchdog.sh"
-
-# Create restart helper (used by daily cron and can be called manually)
-sudo tee "$KIOSK_DIR/restart.sh" > /dev/null << 'RESTART'
-#!/bin/bash
-# Kill Chromium and let the watchdog relaunch it
-logger -t kiosk-restart "Chromium restart requested"
-pkill -f chromium || true
-RESTART
-sudo chmod +x "$KIOSK_DIR/restart.sh"
-
-# Add cron jobs:
-#   - Daily Chromium restart at 4am (watchdog relaunches it automatically)
-#   - Weekly Chromium update (Sunday 3am)
-(crontab -l 2>/dev/null | grep -v 'apt-get.*chromium' | grep -v 'Daily kiosk'; \
- echo "0 3 * * 0 sudo apt-get update -qq && sudo apt-get upgrade -y -qq chromium && sudo reboot"; \
- echo "0 4 * * * /opt/kiosk/restart.sh  # Daily kiosk refresh") | crontab -
-
-# Configure autostart (LXDE - Raspberry Pi OS)
+# --- Autostart (LXDE - Raspberry Pi OS) ---------------------------------------
 mkdir -p "$HOME/.config/lxsession/LXDE-pi"
 if [ -f "$HOME/.config/lxsession/LXDE-pi/autostart" ]; then
     sed -i '/@bash \/opt\/kiosk\/start.sh/d' "$HOME/.config/lxsession/LXDE-pi/autostart"
 fi
 echo "@bash /opt/kiosk/start.sh" >> "$HOME/.config/lxsession/LXDE-pi/autostart"
 
-# Configure autostart (XDG - other desktops)
+# --- Autostart (XDG - other desktops) -----------------------------------------
 mkdir -p "$HOME/.config/autostart"
 cat > "$HOME/.config/autostart/kiosk.desktop" << EOF
 [Desktop Entry]
@@ -210,10 +113,12 @@ EOF
 
 echo ""
 echo "=== Setup complete ==="
-echo "  Reboot to start:   sudo reboot"
-echo "  Exit kiosk:         Alt+F4 or: pkill chromium"
-echo "  Remove:             ./uninstall.sh"
+echo "  Reboot to start:    sudo reboot"
+echo "  Exit kiosk:          pkill KioskAgent"
+echo "  Live logs:           tail -f /opt/kiosk/logs/agent-*.json"
+echo "  Remote logs:         Better Stack (Application = kiosk-agent)"
+echo "  Remove:              ./uninstall.sh"
 echo ""
-echo "  Page auto-refreshes based on the configured interval"
+echo "  The agent self-updates via Velopack and reports health to Better Stack."
 echo ""
 exit 0

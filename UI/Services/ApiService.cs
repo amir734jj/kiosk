@@ -12,6 +12,7 @@ public sealed class ApiService(
     IUsersApi usersApi,
     IPublicApi publicApi,
     IGlobalConfigApi globalConfigApi,
+    IAgentsApi agentsApi,
     AuthService auth)
 {
     // --- Auth ---
@@ -157,6 +158,9 @@ public sealed class ApiService(
 
     // --- Public ---
     public Task<PublicDisplayDto> GetPublicDisplayAsync() => publicApi.GetDisplayAsync();
+
+    // --- Agents ---
+    public Task<List<AgentStatusDto>> GetAgentsAsync() => agentsApi.GetAllAsync();
 
     // --- Global Config ---
     public Task<GlobalConfigModel> GetGlobalConfigAsync() => globalConfigApi.GetAsync();

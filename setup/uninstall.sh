@@ -9,6 +9,7 @@ KIOSK_DIR="/opt/kiosk"
 
 echo "=== Office Kiosk Uninstall ==="
 
+pkill -f "KioskAgent" 2>/dev/null || true
 pkill -f "chromium.*kiosk" 2>/dev/null || true
 pkill -f watchdog.sh 2>/dev/null || true
 pkill unclutter 2>/dev/null || true
