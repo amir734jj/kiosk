@@ -61,6 +61,7 @@ jobs:
             # Auto-increment: take the latest release tag (vMAJOR.MINOR.PATCH)
             # and bump the PATCH by one. Falls back to 1.0.0 for the first release.
             $latest = (gh release view --json tagName --jq .tagName 2>$null) -replace '^v', ''
+            $global:LASTEXITCODE = 0  # 'gh' exits 1 when no release exists yet; don't fail the step.
             if ([string]::IsNullOrWhiteSpace($latest)) {
               $next = '1.0.0'
             }
@@ -71,6 +72,7 @@ jobs:
           }
           Write-Host "Next version: $next"
           "value=$next" >> $env:GITHUB_OUTPUT
+          exit 0
 
       - name: Install Velopack CLI
         run: |
