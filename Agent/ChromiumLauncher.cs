@@ -5,10 +5,11 @@ namespace Kiosk.Agent;
 
 public sealed class ChromiumLauncher(string url)
 {
-    private const string ProcessMatch = "chromium.*--kiosk";
+    // Matches our kiosk instance whether it's chromium or google-chrome.
+    private const string ProcessMatch = "chrom.*--kiosk";
 
-    // Binary name varies across Raspberry Pi OS: "chromium" (Bookworm+) vs
-    // "chromium-browser" (Bullseye and older).
+    // Binary name varies by distro/browser: "chromium" (Bookworm+),
+    // "chromium-browser" (Bullseye/older), or Google Chrome on desktops.
     private readonly string _binary = ResolveBinary();
 
     private static readonly string[] Flags =
@@ -49,11 +50,12 @@ public sealed class ChromiumLauncher(string url)
 
     public void Refresh() => Shell.Run("xdotool", "key", "F5");
 
-    public void Kill() => Shell.Run("pkill", "-f", "chromium");
+    public void Kill() => Shell.Run("pkill", "-f", "chrom");
 
     private static string ResolveBinary()
     {
-        foreach (var name in (string[])["chromium", "chromium-browser"])
+        foreach (var name in (string[])
+            ["chromium", "chromium-browser", "google-chrome-stable", "google-chrome", "chrome"])
         {
             if (!string.IsNullOrWhiteSpace(Shell.Output("which", name)))
             {
@@ -61,7 +63,7 @@ public sealed class ChromiumLauncher(string url)
             }
         }
 
-        Log.Warning("Neither 'chromium' nor 'chromium-browser' found on PATH — defaulting to 'chromium'");
+        Log.Warning("No chromium/google-chrome binary found on PATH — defaulting to 'chromium'");
         return "chromium";
     }
 }
