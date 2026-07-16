@@ -2,15 +2,11 @@ name: Build & Release Agent
 
 on:
   push:
-    branches: [master]
-    tags: ["v*"]
-  pull_request:
-    branches: [master]
   workflow_dispatch:
     inputs:
       version:
         description: "Release version (e.g. 1.0.0)"
-        required: true
+        required: false
 
 permissions:
   contents: write
@@ -35,10 +31,12 @@ jobs:
   release:
     name: Release agent
     needs: build
-    # Only publish a release on a version tag or a manual run.
-    if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
     # Native arm64 host so the self-contained linux-arm64 AppImage is built cleanly.
     runs-on: ubuntu-24.04-arm
+    # Avoid overlapping releases when several pushes land close together.
+    concurrency:
+      group: agent-release
+      cancel-in-progress: false
     steps:
       - uses: actions/checkout@v4
         with:
@@ -50,12 +48,29 @@ jobs:
 
       - name: Resolve version
         id: version
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          INPUT_VERSION: ${{ github.event.inputs.version }}
         run: |
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            echo "value=${{ github.event.inputs.version }}" >> "$GITHUB_OUTPUT"
-          else
-            echo "value=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
-          fi
+          if ($env:INPUT_VERSION) {
+            # Manual override wins.
+            $next = $env:INPUT_VERSION
+          }
+          else {
+            # Auto-increment: take the latest release tag (vMAJOR.MINOR.PATCH)
+            # and bump the PATCH by one. Falls back to 1.0.0 for the first release.
+            $latest = (gh release view --json tagName --jq .tagName 2>$null) -replace '^v', ''
+            if ([string]::IsNullOrWhiteSpace($latest)) {
+              $next = '1.0.0'
+            }
+            else {
+              $v = [version]$latest
+              $next = "$($v.Major).$($v.Minor).$($v.Build + 1)"
+            }
+          }
+          Write-Host "Next version: $next"
+          "value=$next" >> $env:GITHUB_OUTPUT
 
       - name: Install Velopack CLI
         run: |
