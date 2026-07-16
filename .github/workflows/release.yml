@@ -31,12 +31,15 @@ jobs:
   release:
     name: Release agent
     needs: build
-    # Native arm64 host so the self-contained linux-arm64 AppImage is built cleanly.
+    # Native arm64 host. It also cross-publishes the linux-x64 AppImage.
     runs-on: ubuntu-24.04-arm
     # Avoid overlapping releases when several pushes land close together.
     concurrency:
       group: agent-release
       cancel-in-progress: false
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      REPO_URL: https://github.com/${{ github.repository }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -50,7 +53,6 @@ jobs:
         id: version
         shell: pwsh
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           INPUT_VERSION: ${{ github.event.inputs.version }}
         run: |
           if ($env:INPUT_VERSION) {
@@ -79,35 +81,25 @@ jobs:
           dotnet tool install -g vpk --version 1.2.0
           echo "$HOME/.dotnet/tools" >> "$GITHUB_PATH"
 
-      - name: Publish agent (self-contained linux-arm64)
-        run: >
-          dotnet publish Agent/Agent.csproj
-          -c Release
-          -r linux-arm64
-          --self-contained true
-          -o publish
-
-      - name: Download existing releases (for delta updates)
-        continue-on-error: true
-        run: >
-          vpk download github
-          --repoUrl https://github.com/${{ github.repository }}
-          --token ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Pack Velopack release
-        run: >
-          vpk pack
-          --packId KioskAgent
-          --packVersion ${{ steps.version.outputs.value }}
-          --packDir publish
-          --mainExe KioskAgent
-          --runtime linux-arm64
-
-      - name: Upload GitHub release
-        run: >
-          vpk upload github
-          --repoUrl https://github.com/${{ github.repository }}
-          --token ${{ secrets.GITHUB_TOKEN }}
-          --publish
-          --releaseName "KioskAgent ${{ steps.version.outputs.value }}"
-          --tag v${{ steps.version.outputs.value }}
+      - name: Build & publish releases (linux-arm64 + linux-x64)
+        env:
+          VERSION: ${{ steps.version.outputs.value }}
+        run: |
+          set -euo pipefail
+          # One self-contained AppImage per architecture. Each RID gets its own
+          # Velopack channel so the Pi (arm64) and desktops (x64) never pull the
+          # wrong asset; both are merged into a single GitHub release/tag.
+          for RID in linux-arm64 linux-x64; do
+            echo "::group::Release $RID"
+            dotnet publish Agent/Agent.csproj -c Release -r "$RID" --self-contained true -o "publish/$RID"
+            # Pull the current release for this channel so Velopack can build
+            # deltas (ignored on the very first release).
+            vpk download github --repoUrl "$REPO_URL" --token "$GH_TOKEN" --channel "$RID" --outputDir "rel/$RID" || true
+            vpk pack --packId KioskAgent --packVersion "$VERSION" --packDir "publish/$RID" --mainExe KioskAgent --runtime "$RID" --channel "$RID" --outputDir "rel/$RID"
+            vpk upload github --repoUrl "$REPO_URL" --token "$GH_TOKEN" --publish --merge --channel "$RID" --outputDir "rel/$RID" --releaseName "KioskAgent $VERSION" --tag "v$VERSION"
+            # Stable, arch-specific asset name for first-time installs (setup.sh).
+            appimage="$(ls -1 "rel/$RID"/*.AppImage | head -n1)"
+            cp -f "$appimage" "KioskAgent-$RID.AppImage"
+            gh release upload "v$VERSION" "KioskAgent-$RID.AppImage" --clobber --repo "${{ github.repository }}"
+            echo "::endgroup::"
+          done

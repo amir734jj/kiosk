@@ -17,19 +17,29 @@ BACKEND_URL="${1:-${KIOSK_BACKEND_URL:-https://kiosk.hesamian.com}}"
 BACKEND_URL="${BACKEND_URL%/}"
 KIOSK_DIR="/opt/kiosk"
 AGENT_BIN="$KIOSK_DIR/KioskAgent.AppImage"
-AGENT_RELEASE_URL="${AGENT_RELEASE_URL:-https://github.com/amir734jj/kiosk/releases/latest/download/KioskAgent.AppImage}"
+
+# The agent ships one self-contained AppImage per CPU architecture. Pick the
+# one that matches this machine (Raspberry Pi = aarch64, most PCs = x86_64).
+ARCH="$(uname -m)"
+case "$ARCH" in
+    aarch64|arm64) AGENT_RID="linux-arm64" ;;
+    x86_64|amd64)  AGENT_RID="linux-x64" ;;
+    *)
+        echo "ERROR: unsupported architecture '$ARCH'."
+        echo "       The agent ships for 64-bit ARM (aarch64) and 64-bit x86 (x86_64) only."
+        exit 1
+        ;;
+esac
+AGENT_RELEASE_URL="${AGENT_RELEASE_URL:-https://github.com/amir734jj/kiosk/releases/latest/download/KioskAgent-$AGENT_RID.AppImage}"
 
 echo "=== Office Kiosk Setup ==="
 echo "Backend URL: $BACKEND_URL"
 echo "Agent from:  $AGENT_RELEASE_URL"
 
 # --- Architecture check -------------------------------------------------------
-# The agent is published for 64-bit ARM (linux-arm64). 32-bit Pi OS won't run it.
-ARCH="$(uname -m)"
-if [ "$ARCH" != "aarch64" ]; then
-    echo "WARNING: this Pi reports architecture '$ARCH', but the agent needs 64-bit"
-    echo "         Raspberry Pi OS (aarch64). Install the 64-bit OS or the agent"
-    echo "         will fail to start."
+# 32-bit Pi OS can't run the 64-bit AppImage; warn if we somehow got here on one.
+if [ "$ARCH" != "aarch64" ] && [ "$ARCH" != "x86_64" ]; then
+    echo "WARNING: architecture '$ARCH' is not 64-bit; the agent may fail to start."
 fi
 
 # --- Dependencies -------------------------------------------------------------
