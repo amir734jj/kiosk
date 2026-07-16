@@ -70,17 +70,10 @@ builder.WebHost.ConfigureKestrel(serverOptions =>
     serverOptions.ListenAnyIP(port);
 });
 
-if (builder.Environment.IsDevelopment())
-{
-    var sqlitePath = builder.Configuration.GetConnectionString("Default") ?? "Data Source=kiosk.db";
-    builder.Services.AddDbContext<AppDbContext>(opt => opt.UseSqlite(sqlitePath));
-}
-else
-{
-    var connectionString = ConnectionStringUtility.ConnectionStringUrlToPgResource(
-        builder.Configuration.GetValue<string>("DATABASE_URL")!);
-    builder.Services.AddDbContext<AppDbContext>(opt => opt.UseNpgsql(connectionString));
-}
+// Postgres everywhere. Dev supplies DATABASE_URL just like production.
+var connectionString = ConnectionStringUtility.ConnectionStringUrlToPgResource(
+    builder.Configuration.GetValue<string>("DATABASE_URL")!);
+builder.Services.AddDbContext<AppDbContext>(opt => opt.UseNpgsql(connectionString));
 
 builder.Services
     .AddIdentity<AppUser, AppRole>(opt =>
@@ -186,6 +179,14 @@ builder.Services.AddCors(opt =>
         .AllowCredentials()));
 
 var app = builder.Build();
+
+// Create the database on first run and add any tables missing from an existing
+// database (migration-free schema sync).
+using (var scope = app.Services.CreateScope())
+{
+    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    DbInitializer.EnsureSchema(db);
+}
 
 app.UseCors();
 
