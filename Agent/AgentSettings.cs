@@ -5,7 +5,7 @@ namespace Kiosk.Agent;
 
 public sealed record AgentSettings(string BackendUrl, string FallbackDisplayUrl)
 {
-    private const string DefaultBackend = "https://kiosk.hesamian.com";
+    private const string DefaultBackend = "https://kiosk.coolify.hesamian.com";
 
     public static AgentSettings Load(string[] args)
     {

@@ -11,9 +11,9 @@ set -e
 # =========================================
 
 # Args / env:
-#   $1  BACKEND_URL       (default https://kiosk.hesamian.com)
+#   $1  BACKEND_URL       (default https://kiosk.coolify.hesamian.com)
 #   AGENT_RELEASE_URL     override the AppImage download URL
-BACKEND_URL="${1:-${KIOSK_BACKEND_URL:-https://kiosk.hesamian.com}}"
+BACKEND_URL="${1:-${KIOSK_BACKEND_URL:-https://kiosk.coolify.hesamian.com}}"
 BACKEND_URL="${BACKEND_URL%/}"
 KIOSK_DIR="/opt/kiosk"
 AGENT_BIN="$KIOSK_DIR/KioskAgent.AppImage"
