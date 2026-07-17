@@ -14,7 +14,7 @@ public class PublicAgentController(IConfiguration configuration) : ControllerBas
     public ActionResult<AgentConfigDto> GetAgentConfig()
     {
         var dto = new AgentConfigDto(
-            DisplayUrl: configuration["Agent:DisplayUrl"] ?? "https://kiosk.hesamian.com/display",
+            DisplayUrl: configuration["Agent:DisplayUrl"] ?? "https://kiosk.coolify.hesamian.com/display",
             BetterStackSourceToken: configuration["BetterStack:SourceToken"],
             BetterStackIngestingHost: configuration["BetterStack:IngestingHost"],
             UpdateFeedUrl: configuration["Agent:UpdateFeedUrl"],
