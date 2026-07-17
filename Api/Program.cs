@@ -180,14 +180,6 @@ builder.Services.AddCors(opt =>
 
 var app = builder.Build();
 
-// Create the database on first run and add any tables missing from an existing
-// database (migration-free schema sync).
-using (var scope = app.Services.CreateScope())
-{
-    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-    DbInitializer.EnsureSchema(db);
-}
-
 app.UseCors();
 
 app.UseBlazorFrameworkFiles();
